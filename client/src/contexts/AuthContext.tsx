@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { onAuthChange, db } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 
@@ -34,11 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let isAdminUser = isPrimary;
         let adminRole: "primary" | "secondary" | undefined = isPrimary ? "primary" : undefined;
 
-        if (!isPrimary) {
-          // Check if user is a secondary admin
+        if (!isPrimary && firebaseUser.email) {
+          // Check if user is a secondary admin by email
           try {
-            const adminDoc = await getDoc(doc(db, "admins", firebaseUser.uid));
-            if (adminDoc.exists()) {
+            const adminsRef = collection(db, "admins");
+            const q = query(adminsRef, where("email", "==", firebaseUser.email));
+            const snapshot = await getDocs(q);
+            
+            if (!snapshot.empty) {
               isAdminUser = true;
               adminRole = "secondary";
             }

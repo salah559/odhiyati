@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2 } from "lucide-react";
 import type { Admin } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -29,6 +29,11 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { getAllAdmins, removeAdmin as removeAdminFromFirestore } from "@/lib/firestore";
+import { collection, addDoc, query as firestoreQuery, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+const PRIMARY_ADMIN_EMAIL = "bouazzasalah120120@gmail.com";
 
 export default function AdminManagers() {
   const { toast } = useToast();
@@ -37,15 +42,36 @@ export default function AdminManagers() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: admins = [], isLoading } = useQuery<Admin[]>({
-    queryKey: ["/api/admins"],
+    queryKey: ["admins"],
+    queryFn: getAllAdmins,
   });
 
   const addMutation = useMutation({
     mutationFn: async (email: string) => {
-      return await apiRequest("POST", "/api/admins", { email, role: "secondary" });
+      if (email === PRIMARY_ADMIN_EMAIL) {
+        throw new Error("هذا البريد محجوز للمدير الرئيسي");
+      }
+
+      // Check if admin already exists
+      const adminsRef = collection(db, "admins");
+      const q = firestoreQuery(adminsRef, where("email", "==", email));
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        throw new Error("هذا المدير موجود بالفعل");
+      }
+
+      const adminData = {
+        email,
+        role: "secondary" as const,
+        addedAt: new Date().toISOString(),
+      };
+
+      await addDoc(collection(db, "admins"), adminData);
+      return adminData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admins"] });
+      queryClient.invalidateQueries({ queryKey: ["admins"] });
       toast({
         title: "تم الإضافة بنجاح",
         description: "تم إضافة المدير الجديد",
@@ -63,10 +89,13 @@ export default function AdminManagers() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/admins/${id}`, null);
+      if (id === "primary") {
+        throw new Error("لا يمكن حذف المدير الرئيسي");
+      }
+      await removeAdminFromFirestore(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admins"] });
+      queryClient.invalidateQueries({ queryKey: ["admins"] });
       toast({
         title: "تم الحذف بنجاح",
         description: "تم حذف المدير",
@@ -148,35 +177,38 @@ export default function AdminManagers() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>البريد الإلكتروني</TableHead>
-                <TableHead>الدور</TableHead>
-                <TableHead>تاريخ الإضافة</TableHead>
-                <TableHead className="text-center">الإجراءات</TableHead>
+                <TableHead className="text-right">البريد الإلكتروني</TableHead>
+                <TableHead className="text-right">الدور</TableHead>
+                <TableHead className="text-right">تاريخ الإضافة</TableHead>
+                <TableHead className="text-right w-24">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {admins.map((admin) => (
                 <TableRow key={admin.id} data-testid={`row-admin-${admin.id}`}>
-                  <TableCell className="font-medium" data-testid={`text-email-${admin.id}`}>
+                  <TableCell className="font-medium" data-testid={`text-admin-email-${admin.id}`}>
                     {admin.email}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={admin.role === "primary" ? "default" : "secondary"}>
-                      {admin.role === "primary" ? "رئيسي" : "فرعي"}
+                    <Badge
+                      variant={admin.role === "primary" ? "default" : "secondary"}
+                      data-testid={`badge-admin-role-${admin.id}`}
+                    >
+                      {admin.role === "primary" ? "مدير رئيسي" : "مدير ثانوي"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell data-testid={`text-admin-date-${admin.id}`}>
                     {format(new Date(admin.addedAt), "PPP", { locale: ar })}
                   </TableCell>
-                  <TableCell className="text-center">
-                    {admin.role === "secondary" && (
+                  <TableCell>
+                    {admin.role !== "primary" && (
                       <Button
-                        variant="destructive"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setDeleteId(admin.id)}
-                        data-testid={`button-delete-${admin.id}`}
+                        data-testid={`button-delete-admin-${admin.id}`}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     )}
                   </TableCell>
@@ -188,19 +220,19 @@ export default function AdminManagers() {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف هذا المدير وإزالة صلاحياته. هذا الإجراء لا يمكن التراجع عنه.
+              هل أنت متأكد من حذف هذا المدير؟ لا يمكن التراجع عن هذا الإجراء.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete">إلغاء</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteId && deleteMutation.mutate(deleteId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
               data-testid="button-confirm-delete"
             >
               حذف
