@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from "lucide-react";
+import logoImage from "@assets/logo.jpg";
 
 export function Footer() {
   return (
@@ -19,7 +20,7 @@ export function Footer() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <img 
-                  src="/attached_assets/logo.jpg" 
+                  src={logoImage}
                   alt="أضحيتي" 
                   className="h-12 w-auto bg-white dark:bg-white rounded-md px-2 py-1"
                 />

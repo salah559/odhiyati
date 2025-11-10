@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import logoImage from "@assets/logo.jpg";
 
 export function Header() {
   const { user, isAdmin } = useAuth();
@@ -41,7 +42,7 @@ export function Header() {
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer" data-testid="link-home">
               <img
-                src="/attached_assets/logo.jpg"
+                src={logoImage}
                 alt="أضحيتي"
                 className="h-12 w-auto bg-white dark:bg-white rounded-md px-2 py-1"
               />
