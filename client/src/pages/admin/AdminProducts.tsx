@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ProductFormDialog } from "@/components/admin/ProductFormDialog";
+import { SeedDataButton } from "@/components/admin/SeedDataButton";
 
 export default function AdminProducts() {
   const { toast } = useToast();
@@ -74,6 +75,8 @@ export default function AdminProducts() {
           إضافة منتج
         </Button>
       </div>
+
+      <SeedDataButton />
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
