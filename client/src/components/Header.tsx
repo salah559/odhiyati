@@ -41,7 +41,7 @@ export function Header() {
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer" data-testid="link-home">
               <img
-                src="/attached_assets/IMG_20251110_162257_1762789327331.jpg"
+                src="/attached_assets/IMG_20251110_162257_1762789570391.jpg"
                 alt="أضحيتي"
                 className="h-12 w-auto bg-white dark:bg-white rounded-md px-2 py-1"
               />
