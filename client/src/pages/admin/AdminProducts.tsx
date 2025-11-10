@@ -34,8 +34,11 @@ export default function AdminProducts() {
     mutationFn: async (id: string) => {
       return await apiRequest("DELETE", `/api/sheep/${id}`, null);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sheep"] });
+    onSuccess: async () => {
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ queryKey: ["/api/sheep"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/sheep"] });
+      
       toast({
         title: "تم الحذف بنجاح",
         description: "تم حذف المنتج",

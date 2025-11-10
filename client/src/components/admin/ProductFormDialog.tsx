@@ -103,8 +103,11 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
         return await apiRequest("POST", "/api/sheep", data);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sheep"] });
+    onSuccess: async () => {
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ queryKey: ["/api/sheep"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/sheep"] });
+      
       toast({
         title: sheep ? "تم التحديث بنجاح" : "تم الإضافة بنجاح",
         description: sheep ? "تم تحديث المنتج" : "تم إضافة المنتج",
