@@ -21,7 +21,7 @@ export function Footer() {
                 <img 
                   src="/attached_assets/IMG_20251110_162257_1762789327331.jpg" 
                   alt="أضحيتي" 
-                  className="h-12 w-auto"
+                  className="h-12 w-auto bg-white dark:bg-white rounded-md px-2 py-1"
                 />
               </div>
               <p className="text-muted-foreground text-sm leading-relaxed">
