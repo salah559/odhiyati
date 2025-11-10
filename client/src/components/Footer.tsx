@@ -17,7 +17,13 @@ export function Footer() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Company Info */}
             <div>
-              <h3 className="text-xl font-bold text-primary mb-4">أضحيتي</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <img 
+                  src="/attached_assets/s1s1d2piefxa_1740738175_1762780735175.png" 
+                  alt="أضحيتي" 
+                  className="h-12 w-auto"
+                />
+              </div>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 منصة موثوقة لشراء الأغنام والأضاحي عبر الإنترنت. نوفر لك أفضل المنتجات بجودة عالية وأسعار منافسة.
               </p>
