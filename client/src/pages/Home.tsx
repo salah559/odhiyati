@@ -24,7 +24,7 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative min-h-[700px] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[500px] sm:min-h-[600px] md:min-h-[700px] flex items-center justify-center overflow-hidden">
         {/* Background Image with Gradient Overlay */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
@@ -40,18 +40,18 @@ export default function Home() {
           }}
         />
 
-        {/* Decorative Corners */}
-        <div className="absolute top-0 left-0 w-32 h-32 border-t-4 border-l-4 border-primary/30 rounded-tl-3xl" />
-        <div className="absolute top-0 right-0 w-32 h-32 border-t-4 border-r-4 border-primary/30 rounded-tr-3xl" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 border-b-4 border-l-4 border-primary/30 rounded-bl-3xl" />
-        <div className="absolute bottom-0 right-0 w-32 h-32 border-b-4 border-r-4 border-primary/30 rounded-br-3xl" />
+        {/* Decorative Corners - Hidden on mobile */}
+        <div className="hidden sm:block absolute top-0 left-0 w-20 sm:w-24 md:w-32 h-20 sm:h-24 md:h-32 border-t-4 border-l-4 border-primary/30 rounded-tl-3xl" />
+        <div className="hidden sm:block absolute top-0 right-0 w-20 sm:w-24 md:w-32 h-20 sm:h-24 md:h-32 border-t-4 border-r-4 border-primary/30 rounded-tr-3xl" />
+        <div className="hidden sm:block absolute bottom-0 left-0 w-20 sm:w-24 md:w-32 h-20 sm:h-24 md:h-32 border-b-4 border-l-4 border-primary/30 rounded-bl-3xl" />
+        <div className="hidden sm:block absolute bottom-0 right-0 w-20 sm:w-24 md:w-32 h-20 sm:h-24 md:h-32 border-b-4 border-r-4 border-primary/30 rounded-br-3xl" />
 
         {/* Hero Content */}
-        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-20">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-lg" data-testid="text-hero-title">
+        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-12 sm:py-16 md:py-20">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold text-white mb-4 sm:mb-6 drop-shadow-lg" data-testid="text-hero-title">
             اختر أضحيتك المثالية
           </h1>
-          <p className="text-xl md:text-2xl text-white/95 mb-10 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/95 mb-6 sm:mb-8 md:mb-10 max-w-3xl mx-auto leading-relaxed">
             منصة موثوقة لشراء الأغنام والأضاحي بجودة عالية وأسعار منافسة
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -75,17 +75,17 @@ export default function Home() {
           </div>
           
           {/* Stats */}
-          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="mt-8 sm:mt-12 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 max-w-4xl mx-auto">
             {[
               { icon: Star, label: "جودة مضمونة", value: "100%" },
               { icon: Shield, label: "أمان وثقة", value: "24/7" },
               { icon: TrendingUp, label: "أسعار تنافسية", value: "أفضل" },
               { icon: Heart, label: "رضا العملاء", value: "عالي" },
             ].map((stat, idx) => (
-              <div key={idx} className="bg-white/10 backdrop-blur-md rounded-lg p-4 border border-white/20">
-                <stat.icon className="h-8 w-8 text-primary mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stat.value}</div>
-                <div className="text-sm text-white/80">{stat.label}</div>
+              <div key={idx} className="bg-white/10 backdrop-blur-md rounded-lg p-3 sm:p-4 border border-white/20">
+                <stat.icon className="h-6 w-6 sm:h-7 md:h-8 w-6 sm:w-7 md:w-8 text-primary mx-auto mb-2" />
+                <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">{stat.value}</div>
+                <div className="text-xs sm:text-sm text-white/80">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -93,9 +93,9 @@ export default function Home() {
       </section>
 
       {/* Categories Section */}
-      <section className="py-16 bg-muted/30">
+      <section className="py-12 sm:py-16 bg-muted/30">
         <div className="container mx-auto max-w-7xl px-4">
-          <h2 className="text-3xl font-bold text-center mb-12" data-testid="text-categories-title">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12" data-testid="text-categories-title">
             تصفح حسب الفئة
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -127,9 +127,9 @@ export default function Home() {
 
       {/* Featured Products */}
       {featuredSheep.length > 0 && (
-        <section className="py-16">
+        <section className="py-12 sm:py-16">
           <div className="container mx-auto max-w-7xl px-4">
-            <h2 className="text-3xl font-bold text-center mb-12" data-testid="text-featured-title">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12" data-testid="text-featured-title">
               منتجات مميزة
             </h2>
             {isLoading ? (
@@ -151,9 +151,9 @@ export default function Home() {
 
       {/* Special Offers */}
       {discountedSheep.length > 0 && (
-        <section className="py-16 bg-accent/20">
+        <section className="py-12 sm:py-16 bg-accent/20">
           <div className="container mx-auto max-w-7xl px-4">
-            <h2 className="text-3xl font-bold text-center mb-12" data-testid="text-offers-title">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12" data-testid="text-offers-title">
               عروض خاصة
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -166,9 +166,9 @@ export default function Home() {
       )}
 
       {/* Trust Signals */}
-      <section className="py-16">
+      <section className="py-12 sm:py-16">
         <div className="container mx-auto max-w-7xl px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
             {[
               {
                 icon: CheckCircle,

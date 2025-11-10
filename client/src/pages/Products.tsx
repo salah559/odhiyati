@@ -110,10 +110,10 @@ export default function Products() {
   );
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-6 sm:py-8">
       <div className="container mx-auto max-w-7xl px-4">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold" data-testid="text-products-title">المنتجات</h1>
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-products-title">المنتجات</h1>
           
           {/* Mobile Filter Button */}
           <Sheet>
@@ -134,10 +134,10 @@ export default function Products() {
           </Sheet>
         </div>
 
-        <div className="flex gap-8">
+        <div className="flex gap-6 lg:gap-8">
           {/* Desktop Sidebar */}
-          <aside className="hidden md:block w-64 flex-shrink-0">
-            <div className="sticky top-24">
+          <aside className="hidden md:block w-56 lg:w-64 flex-shrink-0">
+            <div className="sticky top-20 md:top-24">
               <FilterPanel />
             </div>
           </aside>
