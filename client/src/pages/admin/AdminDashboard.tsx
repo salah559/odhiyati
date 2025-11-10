@@ -25,58 +25,58 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2" data-testid="text-dashboard-title">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="hidden lg:block">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2" data-testid="text-dashboard-title">
           لوحة الإدارة
         </h1>
         <p className="text-muted-foreground">نظرة عامة على الإحصائيات</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المنتجات</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">إجمالي المنتجات</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-total-products">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="text-total-products">
               {stats.totalProducts}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الطلبات</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">إجمالي الطلبات</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-total-orders">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="text-total-orders">
               {stats.totalOrders}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">طلبات قيد الانتظار</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">طلبات قيد الانتظار</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-pending-orders">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="text-pending-orders">
               {stats.pendingOrders}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الإيرادات المكتملة</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">الإيرادات المكتملة</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-revenue">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="text-revenue">
               {stats.totalRevenue.toLocaleString('ar-DZ')} دج
             </div>
           </CardContent>
@@ -92,20 +92,20 @@ export default function AdminDashboard() {
           {orders.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">لا توجد طلبات بعد</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {orders.slice(0, 5).map((order) => (
                 <div
                   key={order.id}
-                  className="flex items-center justify-between p-4 rounded-lg border"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-lg border"
                   data-testid={`order-item-${order.id}`}
                 >
-                  <div>
-                    <p className="font-medium">{order.userName}</p>
-                    <p className="text-sm text-muted-foreground">{order.userEmail}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{order.userName}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{order.userEmail}</p>
                   </div>
-                  <div className="text-left">
-                    <p className="font-medium">{order.totalAmount.toLocaleString('ar-DZ')} دج</p>
-                    <p className="text-sm text-muted-foreground">{order.status}</p>
+                  <div className="text-right sm:text-left flex-shrink-0">
+                    <p className="font-medium text-sm sm:text-base">{order.totalAmount.toLocaleString('ar-DZ')} دج</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{order.status}</p>
                   </div>
                 </div>
               ))}

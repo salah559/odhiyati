@@ -94,24 +94,27 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="container mx-auto max-w-7xl px-4 py-8">
-        <div className="flex gap-8">
-          {/* Mobile Sidebar */}
-          <div className="lg:hidden">
-            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon" data-testid="button-sidebar-toggle">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right">
-                <div className="mt-6">
-                  <Sidebar />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+      {/* Mobile Header */}
+      <div className="lg:hidden sticky top-0 z-40 bg-background border-b">
+        <div className="flex items-center justify-between p-4">
+          <h2 className="text-lg font-bold">لوحة الإدارة</h2>
+          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" data-testid="button-sidebar-toggle">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <div className="mt-6">
+                <Sidebar />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
 
+      <div className="container mx-auto max-w-7xl px-4 py-4 sm:py-6 md:py-8">
+        <div className="flex gap-6 lg:gap-8">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-24">
@@ -122,7 +125,7 @@ export default function AdminLayout() {
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1">
+          <main className="flex-1 min-w-0">
             <Switch>
               {adminRoutes.map((route) => (
                 <Route key={route.path} path={route.path} component={route.component} />
