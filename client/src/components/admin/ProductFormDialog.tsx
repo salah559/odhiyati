@@ -32,7 +32,8 @@ import { insertSheepSchema, type InsertSheep, type Sheep, sheepCategories } from
 import { queryClient } from "@/lib/queryClient";
 import { createSheep, updateSheep } from "@/lib/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { X } from "lucide-react";
+import { X, Upload, Loader2 } from "lucide-react";
+import { uploadImageToImgBB } from "@/lib/imgbb";
 
 interface ProductFormDialogProps {
   open: boolean;
@@ -44,6 +45,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
   const { toast } = useToast();
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const form = useForm<InsertSheep>({
     resolver: zodResolver(insertSheepSchema),
@@ -125,6 +127,41 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
       });
     },
   });
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار ملف صورة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const imageUrl = await uploadImageToImgBB(file);
+      const updated = [...imageUrls, imageUrl];
+      setImageUrls(updated);
+      form.setValue("images", updated);
+      toast({
+        title: "نجاح",
+        description: "تم رفع الصورة بنجاح",
+      });
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل رفع الصورة",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = "";
+    }
+  };
 
   const addImageUrl = () => {
     if (newImageUrl && !imageUrls.includes(newImageUrl)) {
@@ -249,17 +286,53 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
             {/* Images */}
             <div className="space-y-2">
               <FormLabel>الصور *</FormLabel>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="أدخل رابط الصورة"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  data-testid="input-image-url"
-                />
-                <Button type="button" onClick={addImageUrl} data-testid="button-add-image">
-                  إضافة
-                </Button>
+              
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    disabled={isUploadingImage}
+                    className="hidden"
+                    id="image-upload"
+                    data-testid="input-image-file"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById("image-upload")?.click()}
+                    disabled={isUploadingImage}
+                    className="flex items-center gap-2"
+                    data-testid="button-upload-image"
+                  >
+                    {isUploadingImage ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        جاري الرفع...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        رفع صورة
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="أو أدخل رابط الصورة"
+                    value={newImageUrl}
+                    onChange={(e) => setNewImageUrl(e.target.value)}
+                    data-testid="input-image-url"
+                  />
+                  <Button type="button" onClick={addImageUrl} data-testid="button-add-image">
+                    إضافة
+                  </Button>
+                </div>
               </div>
+
               {imageUrls.length > 0 && (
                 <div className="grid grid-cols-4 gap-2 mt-2">
                   {imageUrls.map((url, index) => (
