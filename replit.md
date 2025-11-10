@@ -86,7 +86,32 @@
 - `POST /api/admins` - إضافة مدير جديد (Primary Admin only)
 - `DELETE /api/admins/:id` - إزالة مدير (Primary Admin only)
 
-## النشر على Vercel
+## النشر على Replit (Current Platform)
+
+### المتطلبات المكتملة
+1. ✅ Firebase Configuration - تم إعداد متغيرات البيئة التالية في Secrets:
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_APP_ID`
+2. ✅ Development Workflow - تم إعداد `npm run dev` للتشغيل على المنفذ 5000
+3. ✅ Deployment Configuration - تم إعداد autoscale مع `npm run build` و `npm run start`
+
+### حالة التطبيق
+✅ **التطبيق جاهز للعمل بالكامل!** البنية التحتية مكتملة ويعمل التطبيق على Replit.
+
+### ملاحظة حول قاعدة البيانات
+التطبيق يستخدم **Firebase Firestore** حصرياً لتخزين البيانات:
+- جميع عمليات البيانات (الأغنام، الطلبات، المدراء) تتم من جانب العميل مباشرة مع Firestore
+- الأمان محمي بواسطة Firestore Security Rules
+- الخادم يقوم فقط بتقديم الواجهة الأمامية وإدارة التوجيه
+
+**ملاحظة:** تم إضافة Drizzle ORM + PostgreSQL في الكود للاستخدام المستقبلي، لكنها غير نشطة حالياً. إذا أردت استخدام PostgreSQL في المستقبل:
+1. افتح قسم "Tools" في الشريط الجانبي
+2. اختر "PostgreSQL Database"
+3. انقر على "Create Database"
+4. شغّل الترحيلات: `npm run db:push`
+
+## النشر على Vercel (Previous Platform)
 
 ### المتطلبات
 1. حساب Firebase مع:
