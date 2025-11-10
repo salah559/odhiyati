@@ -19,7 +19,7 @@ export function Footer() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <img 
-                  src="/attached_assets/s1s1d2piefxa_1740738175_1762780735175.png" 
+                  src="/attached_assets/odhiyati_1762787666114.png" 
                   alt="أضحيتي" 
                   className="h-12 w-auto"
                 />

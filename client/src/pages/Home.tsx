@@ -10,7 +10,7 @@ import heroImage from "@assets/generated_images/Hero_sheep_pastoral_4351d2e5.png
 import ramImage from "@assets/generated_images/Ram_category_image_2f96bd41.png";
 import eweImage from "@assets/generated_images/Ewe_category_image_5444fe06.png";
 import lambImage from "@assets/generated_images/Lamb_category_image_decc492a.png";
-import logoImage from "@assets/s1s1d2piefxa_1740738175_1762784429614.png";
+import logoImage from "@assets/odhiyati_1762787666114.png";
 
 export default function Home() {
   const { data: sheep = [], isLoading } = useQuery<Sheep[]>({
