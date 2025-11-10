@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import logoImage from "@assets/logo.jpg";
+import logoImage from "@assets/logo.png";
 
 export function Header() {
   const { user, isAdmin } = useAuth();
