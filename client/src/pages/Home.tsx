@@ -10,7 +10,6 @@ import heroImage from "@assets/generated_images/Hero_sheep_pastoral_4351d2e5.png
 import ramImage from "@assets/generated_images/Ram_category_image_2f96bd41.png";
 import eweImage from "@assets/generated_images/Ewe_category_image_5444fe06.png";
 import lambImage from "@assets/generated_images/Lamb_category_image_decc492a.png";
-import logoImage from "@assets/odhiyati_1762787666114.png";
 
 export default function Home() {
   const { data: sheep = [], isLoading } = useQuery<Sheep[]>({
@@ -48,9 +47,6 @@ export default function Home() {
 
         {/* Hero Content */}
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto py-20">
-          <div className="mb-8 flex justify-center">
-            <img src={logoImage} alt="أضحيتي" className="h-24 w-auto drop-shadow-2xl" />
-          </div>
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-lg" data-testid="text-hero-title">
             اختر أضحيتك المثالية
           </h1>
