@@ -19,7 +19,7 @@ export function Footer() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <img 
-                  src="/attached_assets/IMG_20251110_162257_1762789570391.jpg" 
+                  src="/attached_assets/logo.jpg" 
                   alt="أضحيتي" 
                   className="h-12 w-auto bg-white dark:bg-white rounded-md px-2 py-1"
                 />
