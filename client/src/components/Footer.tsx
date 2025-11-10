@@ -22,7 +22,7 @@ export function Footer() {
                 <img 
                   src={logoImage}
                   alt="أضحيتي" 
-                  className="h-12 w-auto bg-white dark:bg-white rounded-md px-2 py-1"
+                  className="h-12 w-auto"
                 />
               </div>
               <p className="text-muted-foreground text-sm leading-relaxed">

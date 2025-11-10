@@ -44,7 +44,7 @@ export function Header() {
               <img
                 src={logoImage}
                 alt="أضحيتي"
-                className="h-12 w-auto bg-white dark:bg-white rounded-md px-2 py-1"
+                className="h-12 w-auto"
               />
             </div>
           </Link>
