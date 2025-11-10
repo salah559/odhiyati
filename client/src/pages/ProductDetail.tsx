@@ -137,53 +137,62 @@ export default function ProductDetail() {
   };
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-8 bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto max-w-7xl px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           {/* Image Gallery */}
           <div>
-            <div className="relative aspect-square rounded-lg overflow-hidden mb-4 bg-muted">
-              <img
-                src={sheep.images[currentImageIndex]}
-                alt={`${sheep.name} - صورة ${currentImageIndex + 1}`}
-                className="w-full h-full object-cover"
-                data-testid="img-main"
-              />
-              {sheep.images.length > 1 && (
-                <>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="absolute left-2 top-1/2 -translate-y-1/2"
-                    onClick={prevImage}
-                    data-testid="button-prev-image"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                    onClick={nextImage}
-                    data-testid="button-next-image"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-            </div>
+            <Card className="overflow-hidden border-2 shadow-lg">
+              <div className="relative aspect-square bg-muted">
+                <img
+                  src={sheep.images[currentImageIndex]}
+                  alt={`${sheep.name} - صورة ${currentImageIndex + 1}`}
+                  className="w-full h-full object-cover"
+                  data-testid="img-main"
+                />
+                {sheep.images.length > 1 && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 shadow-lg backdrop-blur-sm bg-background/80"
+                      onClick={prevImage}
+                      data-testid="button-prev-image"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 shadow-lg backdrop-blur-sm bg-background/80"
+                      onClick={nextImage}
+                      data-testid="button-next-image"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </>
+                )}
+                
+                {/* Image Counter */}
+                {sheep.images.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
+                    {currentImageIndex + 1} / {sheep.images.length}
+                  </div>
+                )}
+              </div>
+            </Card>
 
             {/* Thumbnails */}
             {sheep.images.length > 1 && (
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-5 gap-3 mt-4">
                 {sheep.images.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}
-                    className={`aspect-square rounded-md overflow-hidden border-2 transition-all ${
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover-elevate ${
                       index === currentImageIndex
-                        ? "border-primary"
-                        : "border-transparent hover:border-muted-foreground/50"
+                        ? "border-primary ring-2 ring-primary/30"
+                        : "border-border"
                     }`}
                     data-testid={`button-thumbnail-${index}`}
                   >
@@ -199,69 +208,88 @@ export default function ProductDetail() {
           </div>
 
           {/* Product Info */}
-          <div>
-            <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex flex-col">
+            <div className="flex items-start justify-between gap-4 mb-6">
               <div>
-                <h1 className="text-3xl font-bold mb-2" data-testid="text-product-name">
+                <h1 className="text-4xl font-bold mb-3 leading-tight" data-testid="text-product-name">
                   {sheep.name}
                 </h1>
-                <Badge data-testid="badge-category">{sheep.category}</Badge>
+                <div className="flex gap-2">
+                  <Badge variant="secondary" className="text-base px-3 py-1" data-testid="badge-category">
+                    {sheep.category}
+                  </Badge>
+                  {sheep.isFeatured && (
+                    <Badge className="text-base px-3 py-1 bg-accent text-accent-foreground">
+                      ⭐ مميز
+                    </Badge>
+                  )}
+                </div>
               </div>
               {sheep.discountPercentage && (
-                <Badge variant="destructive" className="gap-1" data-testid="badge-discount">
-                  <Percent className="h-3 w-3" />
-                  {sheep.discountPercentage}-
+                <Badge variant="destructive" className="gap-1 text-lg px-4 py-2" data-testid="badge-discount">
+                  <Percent className="h-4 w-4" />
+                  خصم {sheep.discountPercentage}%
                 </Badge>
               )}
             </div>
 
-            <div className="mb-6">
+            <Card className="p-6 mb-6 bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20">
               {discountedPrice ? (
-                <div className="flex items-center gap-3">
-                  <span className="text-4xl font-bold text-primary" data-testid="text-discounted-price">
-                    {discountedPrice.toLocaleString('ar-DZ')} دج
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <span className="text-5xl font-bold text-primary" data-testid="text-discounted-price">
+                    {discountedPrice.toLocaleString('ar-DZ')}
                   </span>
-                  <span className="text-xl text-muted-foreground line-through" data-testid="text-original-price">
+                  <span className="text-lg font-medium">دج</span>
+                  <span className="text-2xl text-muted-foreground line-through" data-testid="text-original-price">
                     {sheep.price.toLocaleString('ar-DZ')} دج
                   </span>
                 </div>
               ) : (
-                <span className="text-4xl font-bold text-primary" data-testid="text-price">
-                  {sheep.price.toLocaleString('ar-DZ')} دج
-                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold text-primary" data-testid="text-price">
+                    {sheep.price.toLocaleString('ar-DZ')}
+                  </span>
+                  <span className="text-lg font-medium">دج</span>
+                </div>
               )}
-            </div>
+            </Card>
 
             {/* Specifications */}
-            <Card className="p-6 mb-6">
-              <h3 className="font-semibold text-lg mb-4">المواصفات</h3>
-              <dl className="grid grid-cols-2 gap-4">
-                <div>
-                  <dt className="text-sm text-muted-foreground mb-1">العمر</dt>
-                  <dd className="font-medium" data-testid="text-age">{sheep.age}</dd>
+            <Card className="p-6 mb-6 border-2">
+              <h3 className="font-bold text-xl mb-5 flex items-center gap-2">
+                <div className="h-1 w-1 rounded-full bg-primary" />
+                المواصفات
+              </h3>
+              <dl className="grid grid-cols-2 gap-5">
+                <div className="space-y-1">
+                  <dt className="text-sm text-muted-foreground">العمر</dt>
+                  <dd className="font-bold text-lg" data-testid="text-age">{sheep.age}</dd>
                 </div>
-                <div>
-                  <dt className="text-sm text-muted-foreground mb-1">الوزن</dt>
-                  <dd className="font-medium" data-testid="text-weight">{sheep.weight}</dd>
+                <div className="space-y-1">
+                  <dt className="text-sm text-muted-foreground">الوزن</dt>
+                  <dd className="font-bold text-lg" data-testid="text-weight">{sheep.weight}</dd>
                 </div>
-                <div>
-                  <dt className="text-sm text-muted-foreground mb-1">السلالة</dt>
-                  <dd className="font-medium" data-testid="text-breed">{sheep.breed}</dd>
+                <div className="space-y-1">
+                  <dt className="text-sm text-muted-foreground">السلالة</dt>
+                  <dd className="font-bold text-lg" data-testid="text-breed">{sheep.breed}</dd>
                 </div>
-                <div>
-                  <dt className="text-sm text-muted-foreground mb-1">الحالة الصحية</dt>
-                  <dd className="font-medium" data-testid="text-health">{sheep.healthStatus}</dd>
+                <div className="space-y-1">
+                  <dt className="text-sm text-muted-foreground">الحالة الصحية</dt>
+                  <dd className="font-bold text-lg" data-testid="text-health">{sheep.healthStatus}</dd>
                 </div>
               </dl>
             </Card>
 
             {/* Description */}
-            <div className="mb-6">
-              <h3 className="font-semibold text-lg mb-3">الوصف</h3>
-              <p className="text-muted-foreground leading-relaxed" data-testid="text-description">
+            <Card className="p-6 mb-6 border-2">
+              <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
+                <div className="h-1 w-1 rounded-full bg-primary" />
+                الوصف
+              </h3>
+              <p className="text-muted-foreground leading-relaxed text-base" data-testid="text-description">
                 {sheep.description}
               </p>
-            </div>
+            </Card>
 
             {/* Trust Badges */}
             <div className="grid grid-cols-3 gap-4 mb-6">
@@ -270,10 +298,10 @@ export default function ProductDetail() {
                 { icon: Shield, label: "شهادة حلال" },
                 { icon: Award, label: "خدمة ممتازة" },
               ].map((item, index) => (
-                <div key={index} className="text-center p-3 rounded-lg bg-muted">
-                  <item.icon className="h-6 w-6 mx-auto mb-2 text-primary" />
-                  <p className="text-xs font-medium">{item.label}</p>
-                </div>
+                <Card key={index} className="text-center p-4 hover-elevate border-2">
+                  <item.icon className="h-8 w-8 mx-auto mb-2 text-primary" />
+                  <p className="text-sm font-bold">{item.label}</p>
+                </Card>
               ))}
             </div>
 
