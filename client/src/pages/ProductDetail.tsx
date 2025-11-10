@@ -20,7 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { getAllSheep, getSheep, createOrder } from "@/lib/firestore";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/products/:id");
@@ -35,20 +36,22 @@ export default function ProductDetail() {
     notes: "",
   });
 
-  const { data: sheep, isLoading } = useQuery<Sheep>({
-    queryKey: ["/api/sheep", params?.id],
+  const { data: sheep, isLoading } = useQuery<Sheep | null>({
+    queryKey: ["sheep", params?.id],
+    queryFn: () => params?.id ? getSheep(params.id) : Promise.resolve(null),
   });
 
   const { data: allSheep = [] } = useQuery<Sheep[]>({
-    queryKey: ["/api/sheep"],
+    queryKey: ["sheep"],
+    queryFn: getAllSheep,
   });
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
-      return await apiRequest("POST", "/api/orders", orderData);
+      return await createOrder(orderData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
       toast({
         title: "تم إرسال الطلب بنجاح",
         description: "سيتم التواصل معك قريباً",

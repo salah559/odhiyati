@@ -4,6 +4,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { CheckCircle, Clock, Shield, Award } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Sheep } from "@shared/schema";
+import { getAllSheep } from "@/lib/firestore";
 import heroImage from "@assets/generated_images/Hero_sheep_pastoral_4351d2e5.png";
 import ramImage from "@assets/generated_images/Ram_category_image_2f96bd41.png";
 import eweImage from "@assets/generated_images/Ewe_category_image_5444fe06.png";
@@ -11,7 +12,8 @@ import lambImage from "@assets/generated_images/Lamb_category_image_decc492a.png
 
 export default function Home() {
   const { data: sheep = [], isLoading } = useQuery<Sheep[]>({
-    queryKey: ["/api/sheep"],
+    queryKey: ["sheep"],
+    queryFn: getAllSheep,
   });
 
   const featuredSheep = sheep.filter(s => s.isFeatured).slice(0, 4);

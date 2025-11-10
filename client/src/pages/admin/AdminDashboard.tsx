@@ -2,14 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, ShoppingCart, Users, TrendingUp } from "lucide-react";
 import type { Sheep, Order } from "@shared/schema";
+import { getAllSheep, getAllOrders } from "@/lib/firestore";
 
 export default function AdminDashboard() {
   const { data: sheep = [] } = useQuery<Sheep[]>({
-    queryKey: ["/api/sheep"],
+    queryKey: ["sheep"],
+    queryFn: getAllSheep,
   });
 
   const { data: orders = [] } = useQuery<Order[]>({
-    queryKey: ["/api/orders"],
+    queryKey: ["orders"],
+    queryFn: getAllOrders,
   });
 
   const stats = {

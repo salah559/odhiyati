@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import type { Sheep } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { getAllSheep, deleteSheep } from "@/lib/firestore";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -27,17 +28,18 @@ export default function AdminProducts() {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const { data: sheep = [], isLoading } = useQuery<Sheep[]>({
-    queryKey: ["/api/sheep"],
+    queryKey: ["sheep"],
+    queryFn: getAllSheep,
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/sheep/${id}`, null);
+      return await deleteSheep(id);
     },
     onSuccess: async () => {
       // Invalidate and refetch immediately
-      await queryClient.invalidateQueries({ queryKey: ["/api/sheep"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/sheep"] });
+      await queryClient.invalidateQueries({ queryKey: ["sheep"] });
+      await queryClient.refetchQueries({ queryKey: ["sheep"] });
       
       toast({
         title: "تم الحذف بنجاح",

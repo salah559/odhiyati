@@ -10,7 +10,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Order, OrderStatus } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { getAllOrders, updateOrderStatus } from "@/lib/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -33,15 +34,16 @@ export default function AdminOrders() {
   const { toast } = useToast();
 
   const { data: orders = [], isLoading } = useQuery<Order[]>({
-    queryKey: ["/api/orders"],
+    queryKey: ["orders"],
+    queryFn: getAllOrders,
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
-      return await apiRequest("PATCH", `/api/orders/${orderId}`, { status });
+      return await updateOrderStatus(orderId, status);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
       toast({
         title: "تم التحديث بنجاح",
         description: "تم تحديث حالة الطلب",
