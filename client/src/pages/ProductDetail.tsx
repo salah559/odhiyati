@@ -31,6 +31,7 @@ export default function ProductDetail() {
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [orderForm, setOrderForm] = useState({
     userName: user?.displayName || "",
+    userEmail: user?.email || "",
     userPhone: "",
     shippingAddress: "",
     notes: "",
@@ -57,7 +58,7 @@ export default function ProductDetail() {
         description: "سيتم التواصل معك قريباً",
       });
       setIsOrderDialogOpen(false);
-      setOrderForm({ userName: "", userPhone: "", shippingAddress: "", notes: "" });
+      setOrderForm({ userName: "", userEmail: "", userPhone: "", shippingAddress: "", notes: "" });
     },
     onError: (error: any) => {
       toast({
@@ -94,17 +95,8 @@ export default function ProductDetail() {
 
   const handleOrderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!user) {
-      toast({
-        title: "يجب تسجيل الدخول",
-        description: "الرجاء تسجيل الدخول أولاً لإتمام الطلب",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    if (!orderForm.userName || !orderForm.userPhone || !orderForm.shippingAddress) {
+    if (!orderForm.userName || !orderForm.userEmail || !orderForm.userPhone || !orderForm.shippingAddress) {
       toast({
         title: "خطأ",
         description: "الرجاء ملء جميع الحقول المطلوبة",
@@ -114,8 +106,8 @@ export default function ProductDetail() {
     }
 
     const orderData = {
-      userId: user.uid,
-      userEmail: user.email || "",
+      userId: user?.uid,
+      userEmail: orderForm.userEmail,
       userName: orderForm.userName,
       userPhone: orderForm.userPhone,
       shippingAddress: orderForm.shippingAddress,
@@ -329,6 +321,18 @@ export default function ProductDetail() {
                       placeholder="أدخل اسمك الكامل"
                       required
                       data-testid="input-order-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="userEmail">البريد الإلكتروني *</Label>
+                    <Input
+                      id="userEmail"
+                      type="email"
+                      value={orderForm.userEmail}
+                      onChange={(e) => setOrderForm({ ...orderForm, userEmail: e.target.value })}
+                      placeholder="example@email.com"
+                      required
+                      data-testid="input-order-email"
                     />
                   </div>
                   <div className="space-y-2">
