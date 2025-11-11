@@ -93,8 +93,10 @@ export default function AdminOrders() {
                       <h3 className="font-semibold text-base sm:text-lg mb-1 truncate" data-testid={`text-customer-${order.id}`}>
                         {order.userName}
                       </h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{order.userEmail}</p>
                       <p className="text-xs sm:text-sm text-muted-foreground">{order.userPhone}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                        {order.wilayaName} - {order.communeName}
+                      </p>
                     </div>
                     <Badge variant={statusColors[order.status]} className="flex-shrink-0" data-testid={`badge-status-${order.id}`}>
                       {statusLabels[order.status]}

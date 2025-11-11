@@ -1,6 +1,6 @@
 import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -20,8 +20,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { queryClient } from "@/lib/queryClient";
 import { getAllSheep, getSheep, createOrder } from "@/lib/firestore";
+import { getWilayas, getCommunesByWilaya } from "@shared/algeria-locations";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/products/:id");
@@ -29,13 +31,20 @@ export default function ProductDetail() {
   const { toast } = useToast();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [selectedWilayaCode, setSelectedWilayaCode] = useState<string>("");
+  const [selectedCommuneId, setSelectedCommuneId] = useState<string>("");
   const [orderForm, setOrderForm] = useState({
     userName: user?.displayName || "",
-    userEmail: user?.email || "",
     userPhone: "",
     shippingAddress: "",
     notes: "",
   });
+
+  const wilayas = useMemo(() => getWilayas(), []);
+  const communes = useMemo(() => 
+    selectedWilayaCode ? getCommunesByWilaya(selectedWilayaCode) : [],
+    [selectedWilayaCode]
+  );
 
   const { data: sheep, isLoading } = useQuery<Sheep | null>({
     queryKey: ["sheep", params?.id],
@@ -58,7 +67,9 @@ export default function ProductDetail() {
         description: "سيتم التواصل معك قريباً",
       });
       setIsOrderDialogOpen(false);
-      setOrderForm({ userName: "", userEmail: "", userPhone: "", shippingAddress: "", notes: "" });
+      setOrderForm({ userName: "", userPhone: "", shippingAddress: "", notes: "" });
+      setSelectedWilayaCode("");
+      setSelectedCommuneId("");
     },
     onError: (error: any) => {
       toast({
@@ -96,7 +107,7 @@ export default function ProductDetail() {
   const handleOrderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!orderForm.userName || !orderForm.userEmail || !orderForm.userPhone || !orderForm.shippingAddress) {
+    if (!orderForm.userName || !orderForm.userPhone || !selectedWilayaCode || !selectedCommuneId || !orderForm.shippingAddress) {
       toast({
         title: "خطأ",
         description: "الرجاء ملء جميع الحقول المطلوبة",
@@ -105,11 +116,26 @@ export default function ProductDetail() {
       return;
     }
 
+    const selectedWilaya = wilayas.find(w => w.code === selectedWilayaCode);
+    const selectedCommune = communes.find(c => c.id === parseInt(selectedCommuneId));
+
+    if (!selectedWilaya || !selectedCommune) {
+      toast({
+        title: "خطأ",
+        description: "الرجاء اختيار الولاية والبلدية",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const orderData = {
       userId: user?.uid,
-      userEmail: orderForm.userEmail,
       userName: orderForm.userName,
       userPhone: orderForm.userPhone,
+      wilayaCode: selectedWilaya.code,
+      wilayaName: selectedWilaya.name,
+      communeId: selectedCommune.id,
+      communeName: selectedCommune.name,
       shippingAddress: orderForm.shippingAddress,
       notes: orderForm.notes,
       items: [
@@ -324,18 +350,6 @@ export default function ProductDetail() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="userEmail">البريد الإلكتروني *</Label>
-                    <Input
-                      id="userEmail"
-                      type="email"
-                      value={orderForm.userEmail}
-                      onChange={(e) => setOrderForm({ ...orderForm, userEmail: e.target.value })}
-                      placeholder="example@email.com"
-                      required
-                      data-testid="input-order-email"
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="userPhone">رقم الهاتف *</Label>
                     <Input
                       id="userPhone"
@@ -348,12 +362,54 @@ export default function ProductDetail() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="shippingAddress">عنوان التوصيل *</Label>
+                    <Label htmlFor="wilaya">الولاية *</Label>
+                    <Select
+                      value={selectedWilayaCode}
+                      onValueChange={(value) => {
+                        setSelectedWilayaCode(value);
+                        setSelectedCommuneId("");
+                      }}
+                      required
+                    >
+                      <SelectTrigger id="wilaya" data-testid="select-wilaya">
+                        <SelectValue placeholder="اختر الولاية" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {wilayas.map((wilaya) => (
+                          <SelectItem key={wilaya.code} value={wilaya.code} data-testid={`option-wilaya-${wilaya.code}`}>
+                            {wilaya.code} - {wilaya.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="commune">البلدية *</Label>
+                    <Select
+                      value={selectedCommuneId}
+                      onValueChange={setSelectedCommuneId}
+                      disabled={!selectedWilayaCode}
+                      required
+                    >
+                      <SelectTrigger id="commune" data-testid="select-commune">
+                        <SelectValue placeholder={selectedWilayaCode ? "اختر البلدية" : "اختر الولاية أولاً"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {communes.map((commune) => (
+                          <SelectItem key={commune.id} value={commune.id.toString()} data-testid={`option-commune-${commune.id}`}>
+                            {commune.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingAddress">عنوان التوصيل التفصيلي *</Label>
                     <Textarea
                       id="shippingAddress"
                       value={orderForm.shippingAddress}
                       onChange={(e) => setOrderForm({ ...orderForm, shippingAddress: e.target.value })}
-                      placeholder="أدخل العنوان الكامل"
+                      placeholder="أدخل العنوان التفصيلي (الحي، الشارع، رقم المنزل...)"
                       required
                       data-testid="input-order-address"
                     />

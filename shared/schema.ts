@@ -52,9 +52,12 @@ export interface OrderItem {
 export interface Order {
   id: string;
   userId?: string;
-  userEmail: string;
   userName: string;
   userPhone: string;
+  wilayaCode: string;
+  wilayaName: string;
+  communeId: number;
+  communeName: string;
   items: OrderItem[];
   totalAmount: number;
   status: OrderStatus;
@@ -66,9 +69,12 @@ export interface Order {
 
 export const insertOrderSchema = z.object({
   userId: z.string().optional(),
-  userEmail: z.string().email("البريد الإلكتروني غير صالح"),
   userName: z.string().min(1, "الاسم مطلوب"),
   userPhone: z.string().min(10, "رقم الهاتف غير صالح"),
+  wilayaCode: z.string().min(1, "الولاية مطلوبة"),
+  wilayaName: z.string().min(1, "الولاية مطلوبة"),
+  communeId: z.number().min(1, "البلدية مطلوبة"),
+  communeName: z.string().min(1, "البلدية مطلوبة"),
   items: z.array(z.object({
     sheepId: z.string(),
     sheepName: z.string(),
