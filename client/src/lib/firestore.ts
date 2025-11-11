@@ -24,7 +24,7 @@ export async function getAllSheep(): Promise<Sheep[]> {
   const sheepRef = collection(db, "sheep");
   const q = query(sheepRef, orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
-  
+
   return snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
@@ -35,11 +35,11 @@ export async function getAllSheep(): Promise<Sheep[]> {
 
 export async function getSheep(id: string): Promise<Sheep | null> {
   const sheepDoc = await getDoc(doc(db, "sheep", id));
-  
+
   if (!sheepDoc.exists()) {
     return null;
   }
-  
+
   const data = sheepDoc.data();
   return {
     id: sheepDoc.id,
@@ -55,7 +55,7 @@ export async function createSheep(data: InsertSheep): Promise<Sheep> {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  
+
   const docRef = await addDoc(collection(db, "sheep"), sheepData);
   return { id: docRef.id, ...sheepData } as Sheep;
 }
@@ -66,9 +66,9 @@ export async function updateSheep(id: string, data: InsertSheep): Promise<Sheep>
     ...data,
     updatedAt: new Date().toISOString(),
   };
-  
+
   await updateDoc(sheepRef, updatedData);
-  
+
   const updatedDoc = await getDoc(sheepRef);
   const docData = updatedDoc.data();
   return {
@@ -89,7 +89,7 @@ export async function getAllOrders(): Promise<Order[]> {
   const ordersRef = collection(db, "orders");
   const q = query(ordersRef, orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
-  
+
   return snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
@@ -98,15 +98,30 @@ export async function getAllOrders(): Promise<Order[]> {
   } as Order));
 }
 
-export async function createOrder(data: InsertOrder): Promise<Order> {
+export async function createOrder(order: Omit<Order, 'id' | 'createdAt'>) {
+  // التحقق من أن userId موجود
+  if (!order.userId) {
+    throw new Error('يجب تسجيل الدخول لإنشاء طلب');
+  }
+
+  const ordersRef = collection(db, 'orders');
+
+  // التأكد من أن جميع الحقول معرفة وإزالة أي قيم undefined
   const orderData = {
-    ...data,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    userId: order.userId,
+    customerName: order.customerName || '',
+    phoneNumber: order.phoneNumber || '',
+    wilaya: order.wilaya || '',
+    commune: order.commune || '',
+    address: order.address || '',
+    items: order.items || [],
+    totalAmount: order.totalAmount || 0,
+    status: order.status || 'pending',
+    createdAt: serverTimestamp(),
   };
-  
-  const docRef = await addDoc(collection(db, "orders"), orderData);
-  return { id: docRef.id, ...orderData } as Order;
+
+  const docRef = await addDoc(ordersRef, orderData);
+  return docRef.id;
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<Order> {
@@ -115,9 +130,9 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
     status,
     updatedAt: new Date().toISOString(),
   };
-  
+
   await updateDoc(orderRef, updatedData);
-  
+
   const updatedDoc = await getDoc(orderRef);
   const docData = updatedDoc.data();
   return {
@@ -133,12 +148,12 @@ export async function updateOrderStatus(id: string, status: Order["status"]): Pr
 export async function getAllAdmins(): Promise<Admin[]> {
   const adminsRef = collection(db, "admins");
   const snapshot = await getDocs(adminsRef);
-  
+
   const admins: Admin[] = snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
   } as Admin));
-  
+
   // Add primary admin
   const primaryAdmin: Admin = {
     id: "primary",
@@ -146,7 +161,7 @@ export async function getAllAdmins(): Promise<Admin[]> {
     role: "primary",
     addedAt: new Date().toISOString(),
   };
-  
+
   return [primaryAdmin, ...admins];
 }
 
@@ -154,29 +169,29 @@ export async function addAdmin(email: string, uid: string): Promise<Admin> {
   if (email === PRIMARY_ADMIN_EMAIL) {
     throw new Error("هذا البريد محجوز للمدير الرئيسي");
   }
-  
+
   // Check if admin already exists
   const adminsRef = collection(db, "admins");
   const q = query(adminsRef, where("email", "==", email));
   const snapshot = await getDocs(q);
-  
+
   if (!snapshot.empty) {
     throw new Error("هذا المدير موجود بالفعل");
   }
-  
+
   const adminData = {
     email,
     role: "secondary" as const,
     addedAt: new Date().toISOString(),
   };
-  
+
   // Use UID as document ID so we can check admin status easily
   await updateDoc(doc(db, "admins", uid), adminData).catch(async () => {
     // If document doesn't exist, create it
     const docRef = doc(db, "admins", uid);
     await updateDoc(docRef, adminData);
   });
-  
+
   return { id: uid, ...adminData };
 }
 
@@ -184,6 +199,6 @@ export async function removeAdmin(id: string): Promise<void> {
   if (id === "primary") {
     throw new Error("لا يمكن حذف المدير الرئيسي");
   }
-  
+
   await deleteDoc(doc(db, "admins", id));
 }
