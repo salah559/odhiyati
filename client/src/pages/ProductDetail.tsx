@@ -36,7 +36,6 @@ export default function ProductDetail() {
   const [orderForm, setOrderForm] = useState({
     userName: user?.displayName || "",
     userPhone: "",
-    shippingAddress: "",
     notes: "",
   });
 
@@ -67,7 +66,7 @@ export default function ProductDetail() {
         description: "سيتم التواصل معك قريباً",
       });
       setIsOrderDialogOpen(false);
-      setOrderForm({ userName: "", userPhone: "", shippingAddress: "", notes: "" });
+      setOrderForm({ userName: "", userPhone: "", notes: "" });
       setSelectedWilayaCode("");
       setSelectedCommuneId("");
     },
@@ -107,7 +106,7 @@ export default function ProductDetail() {
   const handleOrderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!orderForm.userName || !orderForm.userPhone || !selectedWilayaCode || !selectedCommuneId || !orderForm.shippingAddress) {
+    if (!orderForm.userName || !orderForm.userPhone || !selectedWilayaCode || !selectedCommuneId) {
       toast({
         title: "خطأ",
         description: "الرجاء ملء جميع الحقول المطلوبة",
@@ -136,7 +135,6 @@ export default function ProductDetail() {
       wilayaName: selectedWilaya.name,
       communeId: selectedCommune.id,
       communeName: selectedCommune.name,
-      shippingAddress: orderForm.shippingAddress,
       notes: orderForm.notes,
       items: [
         {
@@ -404,23 +402,12 @@ export default function ProductDetail() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="shippingAddress">عنوان التوصيل التفصيلي *</Label>
-                    <Textarea
-                      id="shippingAddress"
-                      value={orderForm.shippingAddress}
-                      onChange={(e) => setOrderForm({ ...orderForm, shippingAddress: e.target.value })}
-                      placeholder="أدخل العنوان التفصيلي (الحي، الشارع، رقم المنزل...)"
-                      required
-                      data-testid="input-order-address"
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="notes">ملاحظات إضافية</Label>
                     <Textarea
                       id="notes"
                       value={orderForm.notes}
                       onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
-                      placeholder="أي ملاحظات أو طلبات خاصة"
+                      placeholder="أي ملاحظات أو طلبات خاصة (العنوان التفصيلي، أوقات التواصل...)"
                       data-testid="input-order-notes"
                     />
                   </div>

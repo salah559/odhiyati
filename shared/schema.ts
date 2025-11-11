@@ -61,7 +61,6 @@ export interface Order {
   items: OrderItem[];
   totalAmount: number;
   status: OrderStatus;
-  shippingAddress: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -83,7 +82,6 @@ export const insertOrderSchema = z.object({
     quantity: z.number().min(1),
   })).min(1, "يجب إضافة منتج واحد على الأقل"),
   totalAmount: z.number().min(0),
-  shippingAddress: z.string().min(10, "العنوان مطلوب"),
   notes: z.string().optional(),
   status: z.enum(orderStatuses).default("pending"),
 });

@@ -124,9 +124,6 @@ export default function AdminOrders() {
                   </div>
 
                   <div className="space-y-1 text-xs sm:text-sm">
-                    <p className="truncate">
-                      <span className="text-muted-foreground">العنوان:</span> {order.shippingAddress}
-                    </p>
                     {order.notes && (
                       <p className="line-clamp-2">
                         <span className="text-muted-foreground">ملاحظات:</span> {order.notes}
