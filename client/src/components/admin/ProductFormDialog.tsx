@@ -51,7 +51,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
     resolver: zodResolver(insertSheepSchema),
     defaultValues: {
       name: "",
-      category: "كبش",
+      category: "محلي",
       price: 0,
       discountPercentage: 0,
       images: [],
@@ -83,7 +83,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
     } else {
       form.reset({
         name: "",
-        category: "كبش",
+        category: "محلي",
         price: 0,
         discountPercentage: 0,
         images: [],

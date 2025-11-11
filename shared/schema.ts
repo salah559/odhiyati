@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Sheep/Product Schema
-export const sheepCategories = ["كبش", "نعجة", "خروف"] as const;
+export const sheepCategories = ["محلي", "روماني", "إسباني"] as const;
 export type SheepCategory = typeof sheepCategories[number];
 
 export interface Sheep {

@@ -16,8 +16,8 @@ export default function Products() {
   const params = new URLSearchParams(window.location.search);
   const categoryParam = params.get("category") as SheepCategory | null;
 
-  const [selectedCategory, setSelectedCategory] = useState<SheepCategory | "all">(categoryParam || "all");
-  const [priceRange, setPriceRange] = useState([0, 1000000]);
+  const [selectedCategory, setSelectedCategory] = useState<SheepCategory | "all" | "أجنبي">(categoryParam || "all");
+  const [weightRange, setWeightRange] = useState([0, 100]);
   const [sortBy, setSortBy] = useState<"newest" | "price-asc" | "price-desc">("newest");
 
   const { data: sheep = [], isLoading } = useQuery<Sheep[]>({
@@ -25,14 +25,22 @@ export default function Products() {
     queryFn: getAllSheep,
   });
 
+  // Extract weight number from string (e.g., "45 كجم" -> 45)
+  const extractWeight = (weightStr: string): number => {
+    const match = weightStr.match(/\d+/);
+    return match ? parseInt(match[0]) : 0;
+  };
+
   // Filter and sort sheep
   const filteredSheep = sheep
-    .filter((s) => selectedCategory === "all" || s.category === selectedCategory)
     .filter((s) => {
-      const finalPrice = s.discountPercentage
-        ? s.price * (1 - s.discountPercentage / 100)
-        : s.price;
-      return finalPrice >= priceRange[0] && finalPrice <= priceRange[1];
+      if (selectedCategory === "all") return true;
+      if (selectedCategory === "أجنبي") return s.category === "روماني" || s.category === "إسباني";
+      return s.category === selectedCategory;
+    })
+    .filter((s) => {
+      const weight = extractWeight(s.weight);
+      return weight >= weightRange[0] && weight <= weightRange[1];
     })
     .sort((a, b) => {
       if (sortBy === "newest") {
@@ -54,36 +62,40 @@ export default function Products() {
             <Label htmlFor="all" className="cursor-pointer">الكل</Label>
           </div>
           <div className="flex items-center space-x-2 space-x-reverse">
-            <RadioGroupItem value="كبش" id="ram" data-testid="radio-category-ram" />
-            <Label htmlFor="ram" className="cursor-pointer">كبش</Label>
+            <RadioGroupItem value="محلي" id="local" data-testid="radio-category-local" />
+            <Label htmlFor="local" className="cursor-pointer">محلي</Label>
           </div>
           <div className="flex items-center space-x-2 space-x-reverse">
-            <RadioGroupItem value="نعجة" id="ewe" data-testid="radio-category-ewe" />
-            <Label htmlFor="ewe" className="cursor-pointer">نعجة</Label>
+            <RadioGroupItem value="أجنبي" id="foreign" data-testid="radio-category-foreign" />
+            <Label htmlFor="foreign" className="cursor-pointer">أجنبي</Label>
           </div>
-          <div className="flex items-center space-x-2 space-x-reverse">
-            <RadioGroupItem value="خروف" id="lamb" data-testid="radio-category-lamb" />
-            <Label htmlFor="lamb" className="cursor-pointer">خروف</Label>
+          <div className="flex items-center space-x-2 space-x-reverse mr-6">
+            <RadioGroupItem value="روماني" id="romanian" data-testid="radio-category-romanian" />
+            <Label htmlFor="romanian" className="cursor-pointer">روماني</Label>
+          </div>
+          <div className="flex items-center space-x-2 space-x-reverse mr-6">
+            <RadioGroupItem value="إسباني" id="spanish" data-testid="radio-category-spanish" />
+            <Label htmlFor="spanish" className="cursor-pointer">إسباني</Label>
           </div>
         </RadioGroup>
       </div>
 
-      {/* Price Range */}
+      {/* Weight Range */}
       <div>
-        <h3 className="font-semibold mb-4">نطاق السعر</h3>
+        <h3 className="font-semibold mb-4">نطاق الوزن</h3>
         <div className="space-y-4">
           <Slider
             min={0}
-            max={1000000}
-            step={10000}
-            value={priceRange}
-            onValueChange={setPriceRange}
+            max={100}
+            step={5}
+            value={weightRange}
+            onValueChange={setWeightRange}
             className="mb-2"
-            data-testid="slider-price"
+            data-testid="slider-weight"
           />
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{priceRange[0].toLocaleString('ar-DZ')} دج</span>
-            <span>{priceRange[1].toLocaleString('ar-DZ')} دج</span>
+            <span>{weightRange[0]} كجم</span>
+            <span>{weightRange[1]} كجم</span>
           </div>
         </div>
       </div>

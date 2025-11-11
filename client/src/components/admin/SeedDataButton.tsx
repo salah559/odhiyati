@@ -9,8 +9,8 @@ import type { InsertSheep } from "@shared/schema";
 
 const sampleProducts: InsertSheep[] = [
   {
-    name: "كبش كبير ممتاز",
-    category: "كبش",
+    name: "خروف محلي ممتاز",
+    category: "محلي",
     price: 85000,
     discountPercentage: 10,
     images: [
@@ -18,30 +18,30 @@ const sampleProducts: InsertSheep[] = [
       "https://images.unsplash.com/photo-1563256905-dc104f8ece9b?w=800&h=800&fit=crop"
     ],
     age: "سنتان",
-    weight: "85 كغ",
+    weight: "85 كجم",
     breed: "العواسي",
     healthStatus: "ممتاز - تم الفحص البيطري",
-    description: "كبش عواسي أصيل، صحة ممتازة، مناسب للأضحية. تم فحصه بيطرياً والتأكد من سلامته.",
+    description: "خروف عواسي محلي أصيل، صحة ممتازة، مناسب للأضحية. تم فحصه بيطرياً والتأكد من سلامته.",
     isFeatured: true,
   },
   {
-    name: "نعجة ممتازة للعائلات",
-    category: "نعجة",
-    price: 65000,
+    name: "خروف روماني مميز",
+    category: "روماني",
+    price: 95000,
     images: [
       "https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=800&h=800&fit=crop",
       "https://images.unsplash.com/photo-1584267761987-f7e5b32fe2cd?w=800&h=800&fit=crop"
     ],
     age: "سنة ونصف",
-    weight: "60 كغ",
-    breed: "الرمبي",
+    weight: "60 كجم",
+    breed: "روماني مستورد",
     healthStatus: "جيد جداً",
-    description: "نعجة بصحة ممتازة، مناسبة للعائلات الصغيرة. لحم طري وجودة عالية.",
+    description: "خروف روماني مستورد بصحة ممتازة، لحم طري وجودة عالية.",
     isFeatured: true,
   },
   {
-    name: "خروف سردي أصيل",
-    category: "خروف",
+    name: "خروف إسباني فاخر",
+    category: "إسباني",
     price: 120000,
     discountPercentage: 15,
     images: [
@@ -49,15 +49,15 @@ const sampleProducts: InsertSheep[] = [
       "https://images.unsplash.com/photo-1588595276888-d6ca3e3f94a8?w=800&h=800&fit=crop"
     ],
     age: "3 سنوات",
-    weight: "110 كغ",
-    breed: "السردي",
+    weight: "90 كجم",
+    breed: "إسباني أصيل",
     healthStatus: "ممتاز - شهادة صحية",
-    description: "خروف سردي أصيل من أفضل السلالات، وزن كبير وصحة ممتازة مع شهادة صحية معتمدة.",
+    description: "خروف إسباني أصيل من أفضل السلالات، وزن مثالي وصحة ممتازة مع شهادة صحية معتمدة.",
     isFeatured: true,
   },
   {
-    name: "كبش البركة - عرض خاص",
-    category: "كبش",
+    name: "خروف محلي - عرض خاص",
+    category: "محلي",
     price: 75000,
     discountPercentage: 20,
     images: [
@@ -65,29 +65,29 @@ const sampleProducts: InsertSheep[] = [
       "https://images.unsplash.com/photo-1572788784834-0a6d8f062e9e?w=800&h=800&fit=crop"
     ],
     age: "سنتان",
-    weight: "75 كغ",
+    weight: "75 كجم",
     breed: "البربري",
     healthStatus: "جيد جداً",
-    description: "كبش بربري ممتاز بسعر مخفض! فرصة رائعة للحصول على أضحية عالية الجودة بسعر مناسب.",
+    description: "خروف بربري محلي ممتاز بسعر مخفض! فرصة رائعة للحصول على أضحية عالية الجودة بسعر مناسب.",
     isFeatured: false,
   },
   {
-    name: "نعجة صغيرة اقتصادية",
-    category: "نعجة",
-    price: 45000,
+    name: "خروف روماني اقتصادي",
+    category: "روماني",
+    price: 85000,
     images: [
       "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&h=800&fit=crop"
     ],
     age: "سنة",
-    weight: "45 كغ",
-    breed: "المحلي",
+    weight: "55 كجم",
+    breed: "روماني",
     healthStatus: "جيد",
-    description: "نعجة صغيرة مناسبة للميزانيات المحدودة، صحة جيدة وجودة مضمونة.",
+    description: "خروف روماني مناسب للميزانيات المحدودة، صحة جيدة وجودة مضمونة.",
     isFeatured: false,
   },
   {
-    name: "كبش فاخر - اختيار المربين",
-    category: "كبش",
+    name: "خروف محلي فاخر - اختيار المربين",
+    category: "محلي",
     price: 150000,
     images: [
       "https://images.unsplash.com/photo-1567416220050-68a8fdc9e1f4?w=800&h=800&fit=crop",
@@ -95,10 +95,10 @@ const sampleProducts: InsertSheep[] = [
       "https://images.unsplash.com/photo-1543637005-6ee5f9656280?w=800&h=800&fit=crop"
     ],
     age: "3 سنوات",
-    weight: "120 كغ",
+    weight: "95 كجم",
     breed: "النعيمي",
     healthStatus: "ممتاز - فحص شامل",
-    description: "كبش نعيمي فاخر من أجود السلالات، وزن استثنائي وصحة ممتازة. مثالي لمن يبحث عن الأفضل.",
+    description: "خروف نعيمي محلي فاخر من أجود السلالات، وزن استثنائي وصحة ممتازة. مثالي لمن يبحث عن الأفضل.",
     isFeatured: true,
   },
 ];

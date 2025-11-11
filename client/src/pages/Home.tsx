@@ -100,9 +100,9 @@ export default function Home() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { name: "كبش", image: ramImage, category: "كبش" },
-              { name: "نعجة", image: eweImage, category: "نعجة" },
-              { name: "خروف", image: lambImage, category: "خروف" },
+              { name: "محلي", image: ramImage, category: "محلي" },
+              { name: "روماني", image: eweImage, category: "روماني" },
+              { name: "إسباني", image: lambImage, category: "إسباني" },
             ].map((cat) => (
               <Link key={cat.category} href={`/products?category=${cat.category}`}>
                 <div 
