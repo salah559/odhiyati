@@ -5,6 +5,7 @@ import {
   getDocs,
   getDoc,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -184,11 +185,8 @@ export async function addAdmin(email: string, uid: string): Promise<Admin> {
   };
 
   // Use UID as document ID so we can check admin status easily
-  await updateDoc(doc(db, "admins", uid), adminData).catch(async () => {
-    // If document doesn't exist, create it
-    const docRef = doc(db, "admins", uid);
-    await updateDoc(docRef, adminData);
-  });
+  const docRef = doc(db, "admins", uid);
+  await setDoc(docRef, adminData);
 
   return { id: uid, ...adminData };
 }

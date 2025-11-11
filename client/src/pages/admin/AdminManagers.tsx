@@ -29,8 +29,8 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { getAllAdmins, removeAdmin as removeAdminFromFirestore } from "@/lib/firestore";
-import { collection, addDoc, query as firestoreQuery, where, getDocs } from "firebase/firestore";
+import { getAllAdmins, removeAdmin as removeAdminFromFirestore, addAdmin } from "@/lib/firestore";
+import { collection, query as firestoreQuery, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const PRIMARY_ADMIN_EMAIL = "bouazzasalah120120@gmail.com";
@@ -61,14 +61,20 @@ export default function AdminManagers() {
         throw new Error("هذا المدير موجود بالفعل");
       }
 
-      const adminData = {
-        email,
-        role: "secondary" as const,
-        addedAt: new Date().toISOString(),
-      };
+      // Get user UID from backend
+      const response = await fetch(`/api/admin/user-by-email?email=${encodeURIComponent(email)}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("المستخدم غير موجود. يجب على المستخدم التسجيل في الموقع أولاً");
+        }
+        throw new Error("فشل في الحصول على معلومات المستخدم");
+      }
 
-      await addDoc(collection(db, "admins"), adminData);
-      return adminData;
+      const userData = await response.json();
+      
+      // Add admin with UID
+      return await addAdmin(email, userData.uid);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admins"] });
