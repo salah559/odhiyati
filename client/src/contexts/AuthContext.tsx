@@ -34,11 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let isAdminUser = isPrimary;
         let adminRole: "primary" | "secondary" | undefined = isPrimary ? "primary" : undefined;
 
-        if (!isPrimary && firebaseUser.email) {
-          // Check if user is a secondary admin by email
+        if (!isPrimary) {
+          // Check if user is a secondary admin by UID
           try {
-            const adminsRef = collection(db, "admins");
-            const q = query(adminsRef, where("email", "==", firebaseUser.email));
+            const adminDocRef = collection(db, "admins");
+            const q = query(adminDocRef, where("email", "==", firebaseUser.email));
             const snapshot = await getDocs(q);
             
             if (!snapshot.empty) {
