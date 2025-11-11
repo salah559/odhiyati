@@ -17,7 +17,8 @@ export default function Products() {
   const categoryParam = params.get("category") as SheepCategory | null;
 
   const [selectedCategory, setSelectedCategory] = useState<SheepCategory | "all" | "أجنبي">(categoryParam || "all");
-  const [weightRange, setWeightRange] = useState([0, 100]);
+  const [minWeight, setMinWeight] = useState(0);
+  const [maxWeight, setMaxWeight] = useState(150);
   const [sortBy, setSortBy] = useState<"newest" | "price-asc" | "price-desc">("newest");
 
   const { data: sheep = [], isLoading } = useQuery<Sheep[]>({
@@ -40,7 +41,7 @@ export default function Products() {
     })
     .filter((s) => {
       const weight = extractWeight(s.weight);
-      return weight >= weightRange[0] && weight <= weightRange[1];
+      return weight >= minWeight && weight <= maxWeight;
     })
     .sort((a, b) => {
       if (sortBy === "newest") {
@@ -82,21 +83,45 @@ export default function Products() {
 
       {/* Weight Range */}
       <div>
-        <h3 className="font-semibold mb-4">نطاق الوزن</h3>
+        <h3 className="font-semibold mb-4">نطاق الوزن (كجم)</h3>
         <div className="space-y-4">
-          <Slider
-            min={0}
-            max={100}
-            step={5}
-            value={weightRange}
-            onValueChange={setWeightRange}
-            className="mb-2"
-            data-testid="slider-weight"
-          />
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{weightRange[0]} كجم</span>
-            <span>{weightRange[1]} كجم</span>
+          <div className="space-y-2">
+            <Label htmlFor="min-weight" className="text-sm">الحد الأدنى: {minWeight} كجم</Label>
+            <Slider
+              id="min-weight"
+              min={0}
+              max={150}
+              step={1}
+              value={[minWeight]}
+              onValueChange={(v) => setMinWeight(v[0])}
+              className="mb-2"
+              data-testid="slider-min-weight"
+            />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="max-weight" className="text-sm">الحد الأقصى: {maxWeight} كجم</Label>
+            <Slider
+              id="max-weight"
+              min={0}
+              max={150}
+              step={1}
+              value={[maxWeight]}
+              onValueChange={(v) => setMaxWeight(v[0])}
+              className="mb-2"
+              data-testid="slider-max-weight"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setMinWeight(0);
+              setMaxWeight(150);
+            }}
+            className="w-full text-xs"
+          >
+            إعادة تعيين الوزن
+          </Button>
         </div>
       </div>
 
