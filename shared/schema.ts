@@ -51,7 +51,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  userId?: string;
+  userId?: string | null;
   userName: string;
   userPhone: string;
   wilayaCode: string;

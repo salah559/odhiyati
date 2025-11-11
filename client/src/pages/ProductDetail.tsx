@@ -35,7 +35,7 @@ export default function ProductDetail() {
   const [selectedCommuneId, setSelectedCommuneId] = useState<string>("");
   const [orderForm, setOrderForm] = useState({
     userName: user?.displayName || "",
-    userPhone: "",
+    userPhone: user?.email || "",
     notes: "",
   });
 
@@ -128,7 +128,7 @@ export default function ProductDetail() {
     }
 
     const orderData = {
-      userId: user?.uid,
+      userId: user?.uid || undefined,
       userName: orderForm.userName,
       userPhone: orderForm.userPhone,
       wilayaCode: selectedWilaya.code,

@@ -98,26 +98,24 @@ export async function getAllOrders(): Promise<Order[]> {
   } as Order));
 }
 
-export async function createOrder(order: Omit<Order, 'id' | 'createdAt'>) {
-  // التحقق من أن userId موجود
-  if (!order.userId) {
-    throw new Error('يجب تسجيل الدخول لإنشاء طلب');
-  }
-
+export async function createOrder(order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) {
   const ordersRef = collection(db, 'orders');
 
   // التأكد من أن جميع الحقول معرفة وإزالة أي قيم undefined
-  const orderData = {
-    userId: order.userId,
-    customerName: order.customerName || '',
-    phoneNumber: order.phoneNumber || '',
-    wilaya: order.wilaya || '',
-    commune: order.commune || '',
-    address: order.address || '',
+  const orderData: any = {
+    userId: order.userId || null,
+    userName: order.userName || '',
+    userPhone: order.userPhone || '',
+    wilayaCode: order.wilayaCode || '',
+    wilayaName: order.wilayaName || '',
+    communeId: order.communeId || 0,
+    communeName: order.communeName || '',
     items: order.items || [],
     totalAmount: order.totalAmount || 0,
     status: order.status || 'pending',
+    notes: order.notes || '',
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
 
   const docRef = await addDoc(ordersRef, orderData);
