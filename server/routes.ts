@@ -1,8 +1,34 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { getUserByEmail } from "./admin";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Download APK endpoint
+  app.get("/api/download-app", (req, res) => {
+    try {
+      const apkPath = path.join(__dirname, "..", "attached_assets", "app-release_1762910223541.apk");
+      
+      if (!fs.existsSync(apkPath)) {
+        return res.status(404).json({ message: "APK file not found" });
+      }
+
+      res.setHeader("Content-Type", "application/vnd.android.package-archive");
+      res.setHeader("Content-Disposition", "attachment; filename=adhiati-app.apk");
+      
+      const fileStream = fs.createReadStream(apkPath);
+      fileStream.pipe(res);
+    } catch (error: any) {
+      console.error("Error downloading APK:", error);
+      res.status(500).json({ message: "Error downloading app" });
+    }
+  });
+
   // Admin API endpoints
   app.get("/api/admin/user-by-email", async (req, res) => {
     try {

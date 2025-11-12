@@ -4,12 +4,7 @@ import { Download, Smartphone, Star, Shield, Zap, Heart } from "lucide-react";
 
 export default function DownloadApp() {
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = '/attached_assets/app-release_1762910223541.apk';
-    link.download = 'adhiati-app.apk';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.location.href = '/api/download-app';
   };
 
   const features = [
