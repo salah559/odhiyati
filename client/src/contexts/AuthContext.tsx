@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User as FirebaseUser } from "firebase/auth";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { onAuthChange, db } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 
@@ -25,48 +25,66 @@ const PRIMARY_ADMIN_EMAIL = "bouazzasalah120120@gmail.com";
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentFirebaseUser, setCurrentFirebaseUser] = useState<FirebaseUser | null>(null);
 
+  // Listen to auth changes
   useEffect(() => {
-    const unsubscribe = onAuthChange(async (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        // Check if user is admin
-        const isPrimary = firebaseUser.email === PRIMARY_ADMIN_EMAIL;
-        let isAdminUser = isPrimary;
-        let adminRole: "primary" | "secondary" | undefined = isPrimary ? "primary" : undefined;
-
-        if (!isPrimary) {
-          // Check if user is a secondary admin by UID
-          try {
-            const adminDocRef = collection(db, "admins");
-            const q = query(adminDocRef, where("email", "==", firebaseUser.email));
-            const snapshot = await getDocs(q);
-            
-            if (!snapshot.empty) {
-              isAdminUser = true;
-              adminRole = "secondary";
-            }
-          } catch (error) {
-            console.error("Error checking admin status:", error);
-          }
-        }
-
-        const appUser: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-          isAdmin: isAdminUser,
-          adminRole: adminRole,
-        };
-        setUser(appUser);
-      } else {
+    const unsubscribe = onAuthChange((firebaseUser: FirebaseUser | null) => {
+      setCurrentFirebaseUser(firebaseUser);
+      if (!firebaseUser) {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  // Listen to admin collection changes in real-time
+  useEffect(() => {
+    if (!currentFirebaseUser) {
+      return;
+    }
+
+    const updateUserAdminStatus = (isAdminUser: boolean, adminRole: "primary" | "secondary" | undefined) => {
+      const appUser: User = {
+        uid: currentFirebaseUser.uid,
+        email: currentFirebaseUser.email,
+        displayName: currentFirebaseUser.displayName,
+        photoURL: currentFirebaseUser.photoURL,
+        isAdmin: isAdminUser,
+        adminRole: adminRole,
+      };
+      setUser(appUser);
+      setLoading(false);
+    };
+
+    const isPrimary = currentFirebaseUser.email === PRIMARY_ADMIN_EMAIL;
+    
+    if (isPrimary) {
+      updateUserAdminStatus(true, "primary");
+      return;
+    }
+
+    // For non-primary users, listen to admins collection in real-time
+    const adminDocRef = collection(db, "admins");
+    const q = query(adminDocRef, where("email", "==", currentFirebaseUser.email));
+    
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const isAdminUser = !snapshot.empty;
+        const adminRole: "primary" | "secondary" | undefined = isAdminUser ? "secondary" : undefined;
+        updateUserAdminStatus(isAdminUser, adminRole);
+      },
+      (error) => {
+        console.error("Error listening to admin status:", error);
+        updateUserAdminStatus(false, undefined);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentFirebaseUser]);
 
   const value = {
     user,
