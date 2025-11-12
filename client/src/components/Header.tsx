@@ -57,6 +57,9 @@ export function Header() {
             <Link href="/products">
               <Button variant="ghost" data-testid="link-products">المنتجات</Button>
             </Link>
+            <Link href="/download">
+              <Button variant="ghost" data-testid="link-download">حمّل التطبيق</Button>
+            </Link>
             {isAdmin && (
               <Link href="/admin">
                 <Button variant="ghost" className="gap-2" data-testid="link-admin">
@@ -121,6 +124,11 @@ export function Header() {
               <Link href="/products">
                 <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="link-products-mobile">
                   المنتجات
+                </Button>
+              </Link>
+              <Link href="/download">
+                <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="link-download-mobile">
+                  حمّل التطبيق
                 </Button>
               </Link>
               {isAdmin && (

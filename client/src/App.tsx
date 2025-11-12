@@ -11,6 +11,7 @@ import Home from "@/pages/Home";
 import Products from "@/pages/Products";
 import ProductDetail from "@/pages/ProductDetail";
 import Login from "@/pages/Login";
+import DownloadApp from "@/pages/DownloadApp";
 import AdminLayout from "@/pages/admin/AdminLayout";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
         <Route path="/products" component={Products} />
         <Route path="/products/:id" component={ProductDetail} />
         <Route path="/login" component={Login} />
+        <Route path="/download" component={DownloadApp} />
         <Route path="/admin" component={AdminLayout} />
         <Route path="/admin/:rest+" component={AdminLayout} />
         <Route component={NotFound} />
