@@ -32,7 +32,7 @@ import { insertSheepSchema, type InsertSheep, type Sheep, sheepCategories } from
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { X, Upload, Loader2 } from "lucide-react";
-import { uploadImageToImgBB } from "@/lib/imgbb";
+import { uploadImageToDatabase } from "@/lib/imageUpload";
 
 interface ProductFormDialogProps {
   open: boolean;
@@ -42,8 +42,7 @@ interface ProductFormDialogProps {
 
 export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDialogProps) {
   const { toast } = useToast();
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [newImageUrl, setNewImageUrl] = useState("");
+  const [imageData, setImageData] = useState<{ id: number; url: string }[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const form = useForm<InsertSheep>({
@@ -51,9 +50,9 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
     defaultValues: {
       name: "",
       category: "محلي",
-      price: 0,
-      discountPercentage: 0,
-      images: [],
+      price: "0",
+      discountPercentage: "0",
+      imageIds: [],
       age: "",
       weight: "",
       breed: "",
@@ -67,10 +66,10 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
     if (sheep) {
       form.reset({
         name: sheep.name,
-        category: sheep.category,
-        price: sheep.price,
-        discountPercentage: sheep.discountPercentage || 0,
-        images: sheep.images,
+        category: sheep.category as "محلي" | "روماني" | "إسباني",
+        price: String(sheep.price),
+        discountPercentage: sheep.discountPercentage ? String(sheep.discountPercentage) : "0",
+        imageIds: sheep.imageIds,
         age: sheep.age,
         weight: sheep.weight,
         breed: sheep.breed,
@@ -78,14 +77,14 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
         description: sheep.description,
         isFeatured: sheep.isFeatured,
       });
-      setImageUrls(sheep.images);
+      setImageData(sheep.images);
     } else {
       form.reset({
         name: "",
         category: "محلي",
-        price: 0,
-        discountPercentage: 0,
-        images: [],
+        price: "0",
+        discountPercentage: "0",
+        imageIds: [],
         age: "",
         weight: "",
         breed: "",
@@ -93,7 +92,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
         description: "",
         isFeatured: false,
       });
-      setImageUrls([]);
+      setImageData([]);
     }
   }, [sheep, form]);
 
@@ -116,7 +115,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
       });
       onOpenChange(false);
       form.reset();
-      setImageUrls([]);
+      setImageData([]);
     },
     onError: (error: any) => {
       toast({
@@ -142,10 +141,15 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
 
     setIsUploadingImage(true);
     try {
-      const imageUrl = await uploadImageToImgBB(file);
-      const updated = [...imageUrls, imageUrl];
-      setImageUrls(updated);
-      form.setValue("images", updated);
+      const imageId = await uploadImageToDatabase(file);
+      const imageUrl = URL.createObjectURL(file);
+      const newImage = { id: imageId, url: imageUrl };
+      const updatedImages = [...imageData, newImage];
+      const updatedIds = updatedImages.map(img => img.id);
+      
+      setImageData(updatedImages);
+      form.setValue("imageIds", updatedIds);
+      
       toast({
         title: "نجاح",
         description: "تم رفع الصورة بنجاح",
@@ -162,23 +166,15 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
     }
   };
 
-  const addImageUrl = () => {
-    if (newImageUrl && !imageUrls.includes(newImageUrl)) {
-      const updated = [...imageUrls, newImageUrl];
-      setImageUrls(updated);
-      form.setValue("images", updated);
-      setNewImageUrl("");
-    }
-  };
-
-  const removeImageUrl = (index: number) => {
-    const updated = imageUrls.filter((_, i) => i !== index);
-    setImageUrls(updated);
-    form.setValue("images", updated);
+  const removeImage = (index: number) => {
+    const updated = imageData.filter((_, i) => i !== index);
+    const updatedIds = updated.map(img => img.id);
+    setImageData(updated);
+    form.setValue("imageIds", updatedIds);
   };
 
   const onSubmit = (data: InsertSheep) => {
-    if (imageUrls.length === 0) {
+    if (imageData.length === 0) {
       toast({
         title: "خطأ",
         description: "يجب إضافة صورة واحدة على الأقل",
@@ -186,7 +182,8 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
       });
       return;
     }
-    mutation.mutate({ ...data, images: imageUrls });
+    const imageIds = imageData.map(img => img.id);
+    mutation.mutate({ ...data, imageIds });
   };
 
   return (
@@ -286,63 +283,49 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
             <div className="space-y-2">
               <FormLabel>الصور *</FormLabel>
               
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    disabled={isUploadingImage}
-                    className="hidden"
-                    id="image-upload"
-                    data-testid="input-image-file"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById("image-upload")?.click()}
-                    disabled={isUploadingImage}
-                    className="flex items-center gap-2"
-                    data-testid="button-upload-image"
-                  >
-                    {isUploadingImage ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        جاري الرفع...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4" />
-                        رفع صورة
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="أو أدخل رابط الصورة"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    data-testid="input-image-url"
-                  />
-                  <Button type="button" onClick={addImageUrl} data-testid="button-add-image">
-                    إضافة
-                  </Button>
-                </div>
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  disabled={isUploadingImage}
+                  className="hidden"
+                  id="image-upload"
+                  data-testid="input-image-file"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById("image-upload")?.click()}
+                  disabled={isUploadingImage}
+                  className="flex items-center gap-2"
+                  data-testid="button-upload-image"
+                >
+                  {isUploadingImage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      جاري الرفع...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      رفع صورة
+                    </>
+                  )}
+                </Button>
               </div>
 
-              {imageUrls.length > 0 && (
+              {imageData.length > 0 && (
                 <div className="grid grid-cols-4 gap-2 mt-2">
-                  {imageUrls.map((url, index) => (
-                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
-                      <img src={url} alt={`صورة ${index + 1}`} className="w-full h-full object-cover" />
+                  {imageData.map((image, index) => (
+                    <div key={image.id} className="relative aspect-square rounded-lg overflow-hidden border">
+                      <img src={image.url} alt={`صورة ${index + 1}`} className="w-full h-full object-cover" />
                       <Button
                         type="button"
                         variant="destructive"
                         size="icon"
                         className="absolute top-1 left-1 h-6 w-6"
-                        onClick={() => removeImageUrl(index)}
+                        onClick={() => removeImage(index)}
                         data-testid={`button-remove-image-${index}`}
                       >
                         <X className="h-3 w-3" />
