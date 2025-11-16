@@ -4,12 +4,14 @@ import { getUserByEmail } from "./admin";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { db } from "./db";
+import { admins } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Download APK endpoint
   app.get("/api/download-app", (req, res) => {
     try {
       const apkPath = path.join(__dirname, "..", "attached_assets", "app-release_1762910223541.apk");
@@ -29,7 +31,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin API endpoints
+  app.get("/api/admins/check", async (req, res) => {
+    try {
+      const email = req.query.email as string;
+      if (!email) {
+        return res.json(null);
+      }
+
+      const [admin] = await db.select().from(admins).where(eq(admins.email, email)).limit(1);
+      
+      if (!admin) {
+        return res.json(null);
+      }
+
+      res.json({ email: admin.email, role: admin.role });
+    } catch (error: any) {
+      console.error("Error checking admin:", error);
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
   app.get("/api/admin/user-by-email", async (req, res) => {
     try {
       const email = req.query.email as string;
