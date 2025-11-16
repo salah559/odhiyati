@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { mysqlTable, varchar, decimal, json, boolean, timestamp, text, int } from "drizzle-orm/mysql-core";
+import { pgTable, varchar, decimal, json, boolean, timestamp, text, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 
 export const sheepCategories = ["محلي", "روماني", "إسباني"] as const;
 export type SheepCategory = typeof sheepCategories[number];
 
-export const sheep = mysqlTable("sheep", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`(UUID())`),
+export const sheep = pgTable("sheep", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 255 }).notNull(),
   category: varchar("category", { length: 50 }).notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
@@ -20,7 +20,7 @@ export const sheep = mysqlTable("sheep", {
   description: text("description").notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Sheep = typeof sheep.$inferSelect;
@@ -43,14 +43,14 @@ export type InsertSheep = z.infer<typeof insertSheepSchema>;
 export const orderStatuses = ["pending", "processing", "completed", "cancelled"] as const;
 export type OrderStatus = typeof orderStatuses[number];
 
-export const orders = mysqlTable("orders", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`(UUID())`),
+export const orders = pgTable("orders", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id", { length: 128 }),
   userName: varchar("user_name", { length: 255 }).notNull(),
   userPhone: varchar("user_phone", { length: 20 }).notNull(),
   wilayaCode: varchar("wilaya_code", { length: 10 }).notNull(),
   wilayaName: varchar("wilaya_name", { length: 100 }).notNull(),
-  communeId: int("commune_id").notNull(),
+  communeId: integer("commune_id").notNull(),
   communeName: varchar("commune_name", { length: 100 }).notNull(),
   items: json("items").$type<{
     sheepId: string;
@@ -63,7 +63,7 @@ export const orders = mysqlTable("orders", {
   status: varchar("status", { length: 20 }).notNull().default("pending"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Order = typeof orders.$inferSelect;
@@ -89,8 +89,8 @@ export const insertOrderSchema = createInsertSchema(orders, {
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
-export const admins = mysqlTable("admins", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`(UUID())`),
+export const admins = pgTable("admins", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email", { length: 255 }).notNull().unique(),
   role: varchar("role", { length: 20 }).notNull().default("secondary"),
   addedAt: timestamp("added_at").defaultNow().notNull(),
@@ -113,8 +113,8 @@ export interface User {
   adminRole?: "primary" | "secondary";
 }
 
-export const discounts = mysqlTable("discounts", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`(UUID())`),
+export const discounts = pgTable("discounts", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   sheepId: varchar("sheep_id", { length: 36 }).notNull(),
   percentage: decimal("percentage", { precision: 5, scale: 2 }).notNull(),
   validFrom: timestamp("valid_from").notNull(),

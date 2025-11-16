@@ -90,9 +90,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [newAdmin] = await db.insert(admins).values({
         email,
         role: "secondary"
-      });
+      }).returning();
 
-      res.json({ id: newAdmin.insertId, email, role: "secondary" });
+      res.json(newAdmin);
     } catch (error: any) {
       console.error("Error adding admin:", error);
       res.status(500).json({ message: error.message || "Internal server error" });
@@ -169,9 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sheep", async (req, res) => {
     try {
       const validated = insertSheepSchema.parse(req.body);
-      const [result] = await db.insert(sheep).values(validated);
-      
-      const [newSheep] = await db.select().from(sheep).where(eq(sheep.id, result.insertId)).limit(1);
+      const [newSheep] = await db.insert(sheep).values(validated).returning();
       res.json(newSheep);
     } catch (error: any) {
       console.error("Error creating sheep:", error);
@@ -218,9 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/orders", async (req, res) => {
     try {
       const validated = insertOrderSchema.parse(req.body);
-      const [result] = await db.insert(orders).values(validated);
-      
-      const [newOrder] = await db.select().from(orders).where(eq(orders.id, result.insertId)).limit(1);
+      const [newOrder] = await db.insert(orders).values(validated).returning();
       res.json(newOrder);
     } catch (error: any) {
       console.error("Error creating order:", error);
