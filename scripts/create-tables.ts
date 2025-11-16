@@ -1,12 +1,11 @@
 import mysql from "mysql2/promise";
 
 async function createTables() {
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-  });
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required. Format: mysql://user:password@host/database");
+  }
+
+  const connection = await mysql.createConnection(process.env.DATABASE_URL.trim());
 
   console.log("Connected to MySQL database!");
 

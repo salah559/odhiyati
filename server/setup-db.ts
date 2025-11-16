@@ -2,12 +2,11 @@ import mysql from "mysql2/promise";
 
 async function setupDatabase() {
   try {
-    const connection = await mysql.createConnection({
-      host: process.env.DB_HOST?.trim(),
-      user: process.env.DB_USER?.trim(),
-      password: process.env.DB_PASS?.trim(),
-      database: process.env.DB_NAME?.trim(),
-    });
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is required. Format: mysql://user:password@host/database");
+    }
+
+    const connection = await mysql.createConnection(process.env.DATABASE_URL.trim());
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS images (
