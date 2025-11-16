@@ -5,7 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { db } from "./db";
-import { admins } from "@shared/schema";
+import { admins, sheep, orders, insertSheepSchema, insertOrderSchema } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,6 +51,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admins", async (req, res) => {
+    try {
+      const allAdmins = await db.select().from(admins);
+      res.json(allAdmins);
+    } catch (error: any) {
+      console.error("Error fetching admins:", error);
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  app.post("/api/admins", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
+      }
+
+      if (email === "bouazzasalah120120@gmail.com") {
+        return res.status(400).json({ message: "هذا البريد محجوز للمدير الرئيسي" });
+      }
+
+      const [existing] = await db.select().from(admins).where(eq(admins.email, email)).limit(1);
+      if (existing) {
+        return res.status(400).json({ message: "هذا المدير موجود بالفعل" });
+      }
+
+      const userResponse = await fetch(`${req.protocol}://${req.get('host')}/api/admin/user-by-email?email=${encodeURIComponent(email)}`);
+      
+      if (!userResponse.ok) {
+        if (userResponse.status === 404) {
+          return res.status(404).json({ message: "المستخدم غير موجود. يجب على المستخدم التسجيل في الموقع أولاً" });
+        }
+        return res.status(500).json({ message: "فشل في الحصول على معلومات المستخدم" });
+      }
+
+      const [newAdmin] = await db.insert(admins).values({
+        email,
+        role: "secondary"
+      });
+
+      res.json({ id: newAdmin.insertId, email, role: "secondary" });
+    } catch (error: any) {
+      console.error("Error adding admin:", error);
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admins/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const [admin] = await db.select().from(admins).where(eq(admins.id, id)).limit(1);
+      
+      if (!admin) {
+        return res.status(404).json({ message: "المدير غير موجود" });
+      }
+
+      if (admin.role === "primary") {
+        return res.status(400).json({ message: "لا يمكن حذف المدير الرئيسي" });
+      }
+
+      await db.delete(admins).where(eq(admins.id, id));
+      res.json({ message: "تم الحذف بنجاح" });
+    } catch (error: any) {
+      console.error("Error deleting admin:", error);
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
   app.get("/api/admin/user-by-email", async (req, res) => {
     try {
       const email = req.query.email as string;
@@ -67,6 +137,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error getting user by email:", error);
       res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  app.get("/api/sheep", async (req, res) => {
+    try {
+      const allSheep = await db.select().from(sheep);
+      res.json(allSheep);
+    } catch (error: any) {
+      console.error("Error fetching sheep:", error);
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  app.get("/api/sheep/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [sheepItem] = await db.select().from(sheep).where(eq(sheep.id, id)).limit(1);
+      
+      if (!sheepItem) {
+        return res.status(404).json({ message: "المنتج غير موجود" });
+      }
+
+      res.json(sheepItem);
+    } catch (error: any) {
+      console.error("Error fetching sheep:", error);
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  app.post("/api/sheep", async (req, res) => {
+    try {
+      const validated = insertSheepSchema.parse(req.body);
+      const [result] = await db.insert(sheep).values(validated);
+      
+      const [newSheep] = await db.select().from(sheep).where(eq(sheep.id, result.insertId)).limit(1);
+      res.json(newSheep);
+    } catch (error: any) {
+      console.error("Error creating sheep:", error);
+      res.status(500).json({ message: error.message || "فشل في إضافة المنتج" });
+    }
+  });
+
+  app.patch("/api/sheep/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validated = insertSheepSchema.parse(req.body);
+      
+      await db.update(sheep).set(validated).where(eq(sheep.id, id));
+      
+      const [updatedSheep] = await db.select().from(sheep).where(eq(sheep.id, id)).limit(1);
+      res.json(updatedSheep);
+    } catch (error: any) {
+      console.error("Error updating sheep:", error);
+      res.status(500).json({ message: error.message || "فشل في تحديث المنتج" });
+    }
+  });
+
+  app.delete("/api/sheep/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(sheep).where(eq(sheep.id, id));
+      res.json({ message: "تم الحذف بنجاح" });
+    } catch (error: any) {
+      console.error("Error deleting sheep:", error);
+      res.status(500).json({ message: error.message || "فشل في حذف المنتج" });
+    }
+  });
+
+  app.get("/api/orders", async (req, res) => {
+    try {
+      const allOrders = await db.select().from(orders);
+      res.json(allOrders);
+    } catch (error: any) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  app.post("/api/orders", async (req, res) => {
+    try {
+      const validated = insertOrderSchema.parse(req.body);
+      const [result] = await db.insert(orders).values(validated);
+      
+      const [newOrder] = await db.select().from(orders).where(eq(orders.id, result.insertId)).limit(1);
+      res.json(newOrder);
+    } catch (error: any) {
+      console.error("Error creating order:", error);
+      res.status(500).json({ message: error.message || "فشل في إنشاء الطلب" });
+    }
+  });
+
+  app.patch("/api/orders/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "الحالة مطلوبة" });
+      }
+
+      await db.update(orders).set({ status }).where(eq(orders.id, id));
+      
+      const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+      res.json(updatedOrder);
+    } catch (error: any) {
+      console.error("Error updating order status:", error);
+      res.status(500).json({ message: error.message || "فشل في تحديث حالة الطلب" });
     }
   });
 

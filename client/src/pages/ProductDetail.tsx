@@ -21,8 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { queryClient } from "@/lib/queryClient";
-import { getAllSheep, getSheep, createOrder } from "@/lib/firestore";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { getWilayas, getCommunesByWilaya } from "@shared/algeria-locations";
 
 export default function ProductDetail() {
@@ -46,21 +45,21 @@ export default function ProductDetail() {
   );
 
   const { data: sheep, isLoading } = useQuery<Sheep | null>({
-    queryKey: ["sheep", params?.id],
-    queryFn: () => params?.id ? getSheep(params.id) : Promise.resolve(null),
+    queryKey: ["/api/sheep", params?.id],
+    enabled: !!params?.id,
   });
 
   const { data: allSheep = [] } = useQuery<Sheep[]>({
-    queryKey: ["sheep"],
-    queryFn: getAllSheep,
+    queryKey: ["/api/sheep"],
   });
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
-      return await createOrder(orderData);
+      const res = await apiRequest("/api/orders", "POST", orderData);
+      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       toast({
         title: "تم إرسال الطلب بنجاح",
         description: "سيتم التواصل معك قريباً",

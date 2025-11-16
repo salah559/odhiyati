@@ -8,7 +8,6 @@ import { Slider } from "@/components/ui/slider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Filter } from "lucide-react";
 import type { Sheep, SheepCategory } from "@shared/schema";
-import { getAllSheep } from "@/lib/firestore";
 import { useLocation } from "wouter";
 
 export default function Products() {
@@ -22,8 +21,7 @@ export default function Products() {
   const [sortBy, setSortBy] = useState<"newest" | "price-asc" | "price-desc">("newest");
 
   const { data: sheep = [], isLoading } = useQuery<Sheep[]>({
-    queryKey: ["sheep"],
-    queryFn: getAllSheep,
+    queryKey: ["/api/sheep"],
   });
 
   // Extract weight number from string (e.g., "45 كجم" -> 45)

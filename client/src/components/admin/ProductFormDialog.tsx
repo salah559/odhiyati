@@ -29,8 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { insertSheepSchema, type InsertSheep, type Sheep, sheepCategories } from "@shared/schema";
-import { queryClient } from "@/lib/queryClient";
-import { createSheep, updateSheep } from "@/lib/firestore";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { X, Upload, Loader2 } from "lucide-react";
 import { uploadImageToImgBB } from "@/lib/imgbb";
@@ -101,15 +100,15 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
   const mutation = useMutation({
     mutationFn: async (data: InsertSheep) => {
       if (sheep) {
-        return await updateSheep(sheep.id, data);
+        const res = await apiRequest(`/api/sheep/${sheep.id}`, "PATCH", data);
+        return await res.json();
       } else {
-        return await createSheep(data);
+        const res = await apiRequest("/api/sheep", "POST", data);
+        return await res.json();
       }
     },
     onSuccess: async () => {
-      // Invalidate and refetch immediately
-      await queryClient.invalidateQueries({ queryKey: ["sheep"] });
-      await queryClient.refetchQueries({ queryKey: ["sheep"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/sheep"] });
       
       toast({
         title: sheep ? "تم التحديث بنجاح" : "تم الإضافة بنجاح",

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { createSheep } from "@/lib/firestore";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Database, Loader2 } from "lucide-react";
 import type { InsertSheep } from "@shared/schema";
 
@@ -127,10 +127,12 @@ export function SeedDataButton() {
 
     try {
       for (const product of sampleProducts) {
-        await createSheep(product);
+        await apiRequest("/api/sheep", "POST", product);
         successCount++;
       }
 
+      await queryClient.invalidateQueries({ queryKey: ["/api/sheep"] });
+      
       setIsSeeded(true);
       toast({
         title: "نجح! 🎉",
@@ -145,7 +147,7 @@ export function SeedDataButton() {
       console.error("Error seeding data:", error);
       toast({
         title: "خطأ",
-        description: `فشلت إضافة البيانات. تم إضافة ${successCount} منتج فقط. تأكد من تطبيق Firestore Security Rules.`,
+        description: `فشلت إضافة البيانات. تم إضافة ${successCount} منتج فقط.`,
         variant: "destructive",
       });
     } finally {

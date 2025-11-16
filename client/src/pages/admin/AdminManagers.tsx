@@ -29,9 +29,7 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { getAllAdmins, removeAdmin as removeAdminFromFirestore, addAdmin } from "@/lib/firestore";
-import { collection, query as firestoreQuery, where, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { apiRequest } from "@/lib/queryClient";
 
 const PRIMARY_ADMIN_EMAIL = "bouazzasalah120120@gmail.com";
 
@@ -42,42 +40,15 @@ export default function AdminManagers() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: admins = [], isLoading } = useQuery<Admin[]>({
-    queryKey: ["admins"],
-    queryFn: getAllAdmins,
+    queryKey: ["/api/admins"],
   });
 
   const addMutation = useMutation({
     mutationFn: async (email: string) => {
-      if (email === PRIMARY_ADMIN_EMAIL) {
-        throw new Error("هذا البريد محجوز للمدير الرئيسي");
-      }
-
-      // Check if admin already exists
-      const adminsRef = collection(db, "admins");
-      const q = firestoreQuery(adminsRef, where("email", "==", email));
-      const snapshot = await getDocs(q);
-
-      if (!snapshot.empty) {
-        throw new Error("هذا المدير موجود بالفعل");
-      }
-
-      // Get user UID from backend
-      const response = await fetch(`/api/admin/user-by-email?email=${encodeURIComponent(email)}`);
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("المستخدم غير موجود. يجب على المستخدم التسجيل في الموقع أولاً");
-        }
-        throw new Error("فشل في الحصول على معلومات المستخدم");
-      }
-
-      const userData = await response.json();
-      
-      // Add admin with UID
-      return await addAdmin(email, userData.uid);
+      return await apiRequest("/api/admins", "POST", { email });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admins"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admins"] });
       toast({
         title: "تم الإضافة بنجاح",
         description: "تم إضافة المدير الجديد",
@@ -95,13 +66,10 @@ export default function AdminManagers() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      if (id === "primary") {
-        throw new Error("لا يمكن حذف المدير الرئيسي");
-      }
-      await removeAdminFromFirestore(id);
+      return await apiRequest(`/api/admins/${id}`, "DELETE");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admins"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admins"] });
       toast({
         title: "تم الحذف بنجاح",
         description: "تم حذف المدير",
