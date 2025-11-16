@@ -15,14 +15,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/download-app", (req, res) => {
     try {
       const apkPath = path.join(__dirname, "..", "attached_assets", "app-release_1762910223541.apk");
-      
+
       if (!fs.existsSync(apkPath)) {
         return res.status(404).json({ message: "APK file not found" });
       }
 
       res.setHeader("Content-Type", "application/vnd.android.package-archive");
       res.setHeader("Content-Disposition", "attachment; filename=adhiati-app.apk");
-      
+
       const fileStream = fs.createReadStream(apkPath);
       fileStream.pipe(res);
     } catch (error: any) {
@@ -34,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/images", async (req, res) => {
     try {
       const { imageData, mimeType } = req.body;
-      
+
       if (!imageData || !mimeType) {
         return res.status(400).json({ message: "بيانات الصورة مطلوبة" });
       }
@@ -55,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const [image] = await db.select().from(images).where(eq(images.id, parseInt(id))).limit(1);
-      
+
       if (!image) {
         return res.status(404).json({ message: "الصورة غير موجودة" });
       }
@@ -75,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const [admin] = await db.select().from(admins).where(eq(admins.email, email)).limit(1);
-      
+
       if (!admin) {
         return res.json(null);
       }
@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admins", async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
       }
@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userResponse = await fetch(`${req.protocol}://${req.get('host')}/api/admin/user-by-email?email=${encodeURIComponent(email)}`);
-      
+
       if (!userResponse.ok) {
         if (userResponse.status === 404) {
           return res.status(404).json({ message: "المستخدم غير موجود. يجب على المستخدم التسجيل في الموقع أولاً" });
@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
 
       const [admin] = await db.select().from(admins).where(eq(admins.id, id)).limit(1);
-      
+
       if (!admin) {
         return res.status(404).json({ message: "المدير غير موجود" });
       }
@@ -179,12 +179,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sheep", async (req, res) => {
     try {
       const allSheep = await db.select().from(sheep);
-      
+
       const sheepWithImages = await Promise.all(allSheep.map(async (s) => {
-        const imageRecords = s.imageIds && s.imageIds.length > 0 
+        const imageRecords = s.imageIds && s.imageIds.length > 0
           ? await db.select().from(images).where(inArray(images.id, s.imageIds))
           : [];
-        
+
         return {
           ...s,
           images: imageRecords.map(img => ({
@@ -193,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })),
         };
       }));
-      
+
       res.json(sheepWithImages);
     } catch (error: any) {
       console.error("Error fetching sheep:", error);
@@ -205,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const [sheepItem] = await db.select().from(sheep).where(eq(sheep.id, parseInt(id))).limit(1);
-      
+
       if (!sheepItem) {
         return res.status(404).json({ message: "المنتج غير موجود" });
       }
@@ -232,13 +232,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sheep", async (req, res) => {
     try {
       const validated = insertSheepSchema.parse(req.body);
-      const result = await db.insert(sheep).values(validated);
-      
+
+      // Ensure imageIds is properly formatted as array
+      const sheepData = {
+        ...validated,
+        imageIds: Array.isArray(validated.imageIds) ? validated.imageIds : []
+      };
+
+      const result = await db.insert(sheep).values(sheepData);
+
       const [newSheep] = await db.select().from(sheep).where(eq(sheep.id, result[0].insertId)).limit(1);
-      
-      const imageRecords = newSheep.imageIds && newSheep.imageIds.length > 0
-        ? await db.select().from(images).where(inArray(images.id, newSheep.imageIds))
-        : [];
+
+      let imageRecords = [];
+      if (newSheep.imageIds && Array.isArray(newSheep.imageIds) && newSheep.imageIds.length > 0) {
+        imageRecords = await db.select().from(images).where(inArray(images.id, newSheep.imageIds));
+      }
 
       const sheepWithImages = {
         ...newSheep,
@@ -259,11 +267,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const validated = insertSheepSchema.parse(req.body);
-      
+
       await db.update(sheep).set(validated).where(eq(sheep.id, parseInt(id)));
-      
+
       const [updatedSheep] = await db.select().from(sheep).where(eq(sheep.id, parseInt(id))).limit(1);
-      
+
       const imageRecords = updatedSheep.imageIds && updatedSheep.imageIds.length > 0
         ? await db.select().from(images).where(inArray(images.id, updatedSheep.imageIds))
         : [];
@@ -308,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertOrderSchema.parse(req.body);
       const result = await db.insert(orders).values(validated);
-      
+
       const [newOrder] = await db.select().from(orders).where(eq(orders.id, result[0].insertId)).limit(1);
       res.json(newOrder);
     } catch (error: any) {
@@ -321,13 +329,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      
+
       if (!status) {
         return res.status(400).json({ message: "الحالة مطلوبة" });
       }
 
       await db.update(orders).set({ status }).where(eq(orders.id, parseInt(id)));
-      
+
       const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, parseInt(id))).limit(1);
       res.json(updatedOrder);
     } catch (error: any) {
