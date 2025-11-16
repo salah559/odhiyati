@@ -181,9 +181,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSheep = await db.select().from(sheep);
 
       const sheepWithImages = await Promise.all(allSheep.map(async (s) => {
-        const imageRecords = s.imageIds && Array.isArray(s.imageIds) && s.imageIds.length > 0
-          ? await db.select().from(images).where(inArray(images.id, s.imageIds))
-          : [];
+        let imageRecords = [];
+        
+        if (s.imageIds && Array.isArray(s.imageIds) && s.imageIds.length > 0) {
+          // Filter out any non-numeric values and ensure we have valid IDs
+          const validIds = s.imageIds.filter(id => typeof id === 'number' && id > 0);
+          
+          if (validIds.length > 0) {
+            imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+          }
+        }
 
         return {
           ...s,
@@ -210,9 +217,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "المنتج غير موجود" });
       }
 
-      const imageRecords = sheepItem.imageIds && sheepItem.imageIds.length > 0
-        ? await db.select().from(images).where(inArray(images.id, sheepItem.imageIds))
-        : [];
+      let imageRecords = [];
+      
+      if (sheepItem.imageIds && Array.isArray(sheepItem.imageIds) && sheepItem.imageIds.length > 0) {
+        const validIds = sheepItem.imageIds.filter(id => typeof id === 'number' && id > 0);
+        
+        if (validIds.length > 0) {
+          imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+        }
+      }
 
       const sheepWithImages = {
         ...sheepItem,
@@ -233,10 +246,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertSheepSchema.parse(req.body);
 
-      // Ensure imageIds is properly formatted as array
+      // Ensure imageIds is properly formatted as array with valid numbers
+      const validImageIds = Array.isArray(validated.imageIds) 
+        ? validated.imageIds.filter(id => typeof id === 'number' && id > 0)
+        : [];
+
       const sheepData = {
         ...validated,
-        imageIds: Array.isArray(validated.imageIds) ? validated.imageIds : []
+        imageIds: validImageIds
       };
 
       const result = await db.insert(sheep).values(sheepData);
@@ -245,7 +262,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let imageRecords = [];
       if (newSheep.imageIds && Array.isArray(newSheep.imageIds) && newSheep.imageIds.length > 0) {
-        imageRecords = await db.select().from(images).where(inArray(images.id, newSheep.imageIds));
+        const validIds = newSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
+        
+        if (validIds.length > 0) {
+          imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+        }
       }
 
       const sheepWithImages = {
@@ -268,13 +289,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validated = insertSheepSchema.parse(req.body);
 
-      await db.update(sheep).set(validated).where(eq(sheep.id, parseInt(id)));
+      // Ensure imageIds is properly formatted
+      const updateData = {
+        ...validated,
+        imageIds: Array.isArray(validated.imageIds) 
+          ? validated.imageIds.filter(id => typeof id === 'number' && id > 0)
+          : []
+      };
+
+      await db.update(sheep).set(updateData).where(eq(sheep.id, parseInt(id)));
 
       const [updatedSheep] = await db.select().from(sheep).where(eq(sheep.id, parseInt(id))).limit(1);
 
-      const imageRecords = updatedSheep.imageIds && updatedSheep.imageIds.length > 0
-        ? await db.select().from(images).where(inArray(images.id, updatedSheep.imageIds))
-        : [];
+      let imageRecords = [];
+      if (updatedSheep.imageIds && Array.isArray(updatedSheep.imageIds) && updatedSheep.imageIds.length > 0) {
+        const validIds = updatedSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
+        
+        if (validIds.length > 0) {
+          imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+        }
+      }
 
       const sheepWithImages = {
         ...updatedSheep,
