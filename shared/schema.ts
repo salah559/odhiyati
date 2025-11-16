@@ -1,18 +1,29 @@
 import { z } from "zod";
-import { pgTable, varchar, decimal, json, boolean, timestamp, text, integer } from "drizzle-orm/pg-core";
+import { mysqlTable, varchar, decimal, json, boolean, timestamp, text, int, mediumtext, serial } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 
 export const sheepCategories = ["محلي", "روماني", "إسباني"] as const;
 export type SheepCategory = typeof sheepCategories[number];
 
-export const sheep = pgTable("sheep", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+export const images = mysqlTable("images", {
+  id: serial("id").primaryKey(),
+  imageData: mediumtext("image_data").notNull(),
+  mimeType: varchar("mime_type", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Image = typeof images.$inferSelect;
+export const insertImageSchema = createInsertSchema(images).omit({ id: true, createdAt: true });
+export type InsertImage = z.infer<typeof insertImageSchema>;
+
+export const sheep = mysqlTable("sheep", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   category: varchar("category", { length: 50 }).notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }),
-  images: json("images").$type<string[]>().notNull(),
+  imageIds: json("image_ids").$type<number[]>().notNull(),
   age: varchar("age", { length: 100 }).notNull(),
   weight: varchar("weight", { length: 100 }).notNull(),
   breed: varchar("breed", { length: 100 }).notNull(),
@@ -20,7 +31,7 @@ export const sheep = pgTable("sheep", {
   description: text("description").notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
 export type Sheep = typeof sheep.$inferSelect;
@@ -29,7 +40,7 @@ export const insertSheepSchema = createInsertSchema(sheep, {
   category: z.enum(sheepCategories),
   price: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "السعر يجب أن يكون موجباً"),
   discountPercentage: z.string().optional().refine((val) => !val || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), "النسبة يجب أن تكون بين 0 و 100"),
-  images: z.array(z.string()).min(1, "يجب إضافة صورة واحدة على الأقل"),
+  imageIds: z.array(z.number()).min(1, "يجب إضافة صورة واحدة على الأقل"),
   age: z.string().min(1, "العمر مطلوب"),
   weight: z.string().min(1, "الوزن مطلوب"),
   breed: z.string().min(1, "السلالة مطلوبة"),
@@ -43,19 +54,19 @@ export type InsertSheep = z.infer<typeof insertSheepSchema>;
 export const orderStatuses = ["pending", "processing", "completed", "cancelled"] as const;
 export type OrderStatus = typeof orderStatuses[number];
 
-export const orders = pgTable("orders", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+export const orders = mysqlTable("orders", {
+  id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 128 }),
   userName: varchar("user_name", { length: 255 }).notNull(),
   userPhone: varchar("user_phone", { length: 20 }).notNull(),
   wilayaCode: varchar("wilaya_code", { length: 10 }).notNull(),
   wilayaName: varchar("wilaya_name", { length: 100 }).notNull(),
-  communeId: integer("commune_id").notNull(),
+  communeId: int("commune_id").notNull(),
   communeName: varchar("commune_name", { length: 100 }).notNull(),
   items: json("items").$type<{
-    sheepId: string;
+    sheepId: number;
     sheepName: string;
-    sheepImage: string;
+    sheepImageId: number;
     price: number;
     quantity: number;
   }[]>().notNull(),
@@ -63,7 +74,7 @@ export const orders = pgTable("orders", {
   status: varchar("status", { length: 20 }).notNull().default("pending"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
 export type Order = typeof orders.$inferSelect;
@@ -76,9 +87,9 @@ export const insertOrderSchema = createInsertSchema(orders, {
   communeId: z.number().min(1, "البلدية مطلوبة"),
   communeName: z.string().min(1, "البلدية مطلوبة"),
   items: z.array(z.object({
-    sheepId: z.string(),
+    sheepId: z.number(),
     sheepName: z.string(),
-    sheepImage: z.string(),
+    sheepImageId: z.number(),
     price: z.number(),
     quantity: z.number().min(1),
   })).min(1, "يجب إضافة منتج واحد على الأقل"),
@@ -89,8 +100,8 @@ export const insertOrderSchema = createInsertSchema(orders, {
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
-export const admins = pgTable("admins", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+export const admins = mysqlTable("admins", {
+  id: serial("id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   role: varchar("role", { length: 20 }).notNull().default("secondary"),
   addedAt: timestamp("added_at").defaultNow().notNull(),
@@ -113,9 +124,9 @@ export interface User {
   adminRole?: "primary" | "secondary";
 }
 
-export const discounts = pgTable("discounts", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-  sheepId: varchar("sheep_id", { length: 36 }).notNull(),
+export const discounts = mysqlTable("discounts", {
+  id: serial("id").primaryKey(),
+  sheepId: int("sheep_id").notNull(),
   percentage: decimal("percentage", { precision: 5, scale: 2 }).notNull(),
   validFrom: timestamp("valid_from").notNull(),
   validTo: timestamp("valid_to").notNull(),
@@ -125,7 +136,7 @@ export const discounts = pgTable("discounts", {
 
 export type Discount = typeof discounts.$inferSelect;
 export const insertDiscountSchema = createInsertSchema(discounts, {
-  sheepId: z.string().min(1, "يجب اختيار منتج"),
+  sheepId: z.number().min(1, "يجب اختيار منتج"),
   percentage: z.string().refine((val) => {
     const num = parseFloat(val);
     return !isNaN(num) && num >= 1 && num <= 100;

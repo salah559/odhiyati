@@ -5,8 +5,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { db } from "./db";
-import { admins, sheep, orders, insertSheepSchema, insertOrderSchema } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { admins, sheep, orders, images, insertSheepSchema, insertOrderSchema, insertImageSchema } from "@shared/schema";
+import { eq, inArray } from "drizzle-orm";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,6 +28,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error downloading APK:", error);
       res.status(500).json({ message: "Error downloading app" });
+    }
+  });
+
+  app.post("/api/images", async (req, res) => {
+    try {
+      const { imageData, mimeType } = req.body;
+      
+      if (!imageData || !mimeType) {
+        return res.status(400).json({ message: "بيانات الصورة مطلوبة" });
+      }
+
+      const result = await db.insert(images).values({
+        imageData,
+        mimeType,
+      });
+
+      res.json({ id: result[0].insertId });
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      res.status(500).json({ message: error.message || "فشل في رفع الصورة" });
+    }
+  });
+
+  app.get("/api/images/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [image] = await db.select().from(images).where(eq(images.id, parseInt(id))).limit(1);
+      
+      if (!image) {
+        return res.status(404).json({ message: "الصورة غير موجودة" });
+      }
+
+      res.json(image);
+    } catch (error: any) {
+      console.error("Error fetching image:", error);
+      res.status(500).json({ message: error.message || "فشل في جلب الصورة" });
     }
   });
 
@@ -87,12 +123,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "فشل في الحصول على معلومات المستخدم" });
       }
 
-      const [newAdmin] = await db.insert(admins).values({
+      const result = await db.insert(admins).values({
         email,
         role: "secondary"
-      }).returning();
+      });
 
-      res.json(newAdmin);
+      res.json({ id: result[0].insertId, email, role: "secondary" });
     } catch (error: any) {
       console.error("Error adding admin:", error);
       res.status(500).json({ message: error.message || "Internal server error" });
@@ -143,7 +179,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sheep", async (req, res) => {
     try {
       const allSheep = await db.select().from(sheep);
-      res.json(allSheep);
+      
+      const sheepWithImages = await Promise.all(allSheep.map(async (s) => {
+        const imageRecords = s.imageIds && s.imageIds.length > 0 
+          ? await db.select().from(images).where(inArray(images.id, s.imageIds))
+          : [];
+        
+        return {
+          ...s,
+          images: imageRecords.map(img => ({
+            id: img.id,
+            url: `data:${img.mimeType};base64,${img.imageData}`,
+          })),
+        };
+      }));
+      
+      res.json(sheepWithImages);
     } catch (error: any) {
       console.error("Error fetching sheep:", error);
       res.status(500).json({ message: error.message || "Internal server error" });
@@ -153,13 +204,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sheep/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const [sheepItem] = await db.select().from(sheep).where(eq(sheep.id, id)).limit(1);
+      const [sheepItem] = await db.select().from(sheep).where(eq(sheep.id, parseInt(id))).limit(1);
       
       if (!sheepItem) {
         return res.status(404).json({ message: "المنتج غير موجود" });
       }
 
-      res.json(sheepItem);
+      const imageRecords = sheepItem.imageIds && sheepItem.imageIds.length > 0
+        ? await db.select().from(images).where(inArray(images.id, sheepItem.imageIds))
+        : [];
+
+      const sheepWithImages = {
+        ...sheepItem,
+        images: imageRecords.map(img => ({
+          id: img.id,
+          url: `data:${img.mimeType};base64,${img.imageData}`,
+        })),
+      };
+
+      res.json(sheepWithImages);
     } catch (error: any) {
       console.error("Error fetching sheep:", error);
       res.status(500).json({ message: error.message || "Internal server error" });
@@ -169,8 +232,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sheep", async (req, res) => {
     try {
       const validated = insertSheepSchema.parse(req.body);
-      const [newSheep] = await db.insert(sheep).values(validated).returning();
-      res.json(newSheep);
+      const result = await db.insert(sheep).values(validated);
+      
+      const [newSheep] = await db.select().from(sheep).where(eq(sheep.id, result[0].insertId)).limit(1);
+      
+      const imageRecords = newSheep.imageIds && newSheep.imageIds.length > 0
+        ? await db.select().from(images).where(inArray(images.id, newSheep.imageIds))
+        : [];
+
+      const sheepWithImages = {
+        ...newSheep,
+        images: imageRecords.map(img => ({
+          id: img.id,
+          url: `data:${img.mimeType};base64,${img.imageData}`,
+        })),
+      };
+
+      res.json(sheepWithImages);
     } catch (error: any) {
       console.error("Error creating sheep:", error);
       res.status(500).json({ message: error.message || "فشل في إضافة المنتج" });
@@ -182,10 +260,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validated = insertSheepSchema.parse(req.body);
       
-      await db.update(sheep).set(validated).where(eq(sheep.id, id));
+      await db.update(sheep).set(validated).where(eq(sheep.id, parseInt(id)));
       
-      const [updatedSheep] = await db.select().from(sheep).where(eq(sheep.id, id)).limit(1);
-      res.json(updatedSheep);
+      const [updatedSheep] = await db.select().from(sheep).where(eq(sheep.id, parseInt(id))).limit(1);
+      
+      const imageRecords = updatedSheep.imageIds && updatedSheep.imageIds.length > 0
+        ? await db.select().from(images).where(inArray(images.id, updatedSheep.imageIds))
+        : [];
+
+      const sheepWithImages = {
+        ...updatedSheep,
+        images: imageRecords.map(img => ({
+          id: img.id,
+          url: `data:${img.mimeType};base64,${img.imageData}`,
+        })),
+      };
+
+      res.json(sheepWithImages);
     } catch (error: any) {
       console.error("Error updating sheep:", error);
       res.status(500).json({ message: error.message || "فشل في تحديث المنتج" });
@@ -195,7 +286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/sheep/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      await db.delete(sheep).where(eq(sheep.id, id));
+      await db.delete(sheep).where(eq(sheep.id, parseInt(id)));
       res.json({ message: "تم الحذف بنجاح" });
     } catch (error: any) {
       console.error("Error deleting sheep:", error);
@@ -216,7 +307,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/orders", async (req, res) => {
     try {
       const validated = insertOrderSchema.parse(req.body);
-      const [newOrder] = await db.insert(orders).values(validated).returning();
+      const result = await db.insert(orders).values(validated);
+      
+      const [newOrder] = await db.select().from(orders).where(eq(orders.id, result[0].insertId)).limit(1);
       res.json(newOrder);
     } catch (error: any) {
       console.error("Error creating order:", error);
@@ -233,9 +326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "الحالة مطلوبة" });
       }
 
-      await db.update(orders).set({ status }).where(eq(orders.id, id));
+      await db.update(orders).set({ status }).where(eq(orders.id, parseInt(id)));
       
-      const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+      const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, parseInt(id))).limit(1);
       res.json(updatedOrder);
     } catch (error: any) {
       console.error("Error updating order status:", error);
