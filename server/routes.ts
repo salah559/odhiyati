@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSheep = await db.select().from(sheep);
 
       const sheepWithImages = await Promise.all(allSheep.map(async (s) => {
-        const imageRecords = s.imageIds && s.imageIds.length > 0
+        const imageRecords = s.imageIds && Array.isArray(s.imageIds) && s.imageIds.length > 0
           ? await db.select().from(images).where(inArray(images.id, s.imageIds))
           : [];
 
