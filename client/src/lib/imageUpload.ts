@@ -35,10 +35,16 @@ export async function uploadImageToDatabase(file: File): Promise<number> {
     });
 
     if (!response.ok) {
-      throw new Error('فشل رفع الصورة');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'فشل رفع الصورة');
     }
 
     const data: UploadImageResponse = await response.json();
+    
+    if (!data.id) {
+      throw new Error('لم يتم استلام معرف الصورة من الخادم');
+    }
+    
     return data.id;
   } catch (error: any) {
     console.error('Error uploading image:', error);

@@ -39,12 +39,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "بيانات الصورة مطلوبة" });
       }
 
+      // التحقق من نوع الصورة
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+      if (!allowedTypes.includes(mimeType.toLowerCase())) {
+        return res.status(400).json({ message: "نوع الصورة غير مدعوم" });
+      }
+
+      // التحقق من أن البيانات base64 صالحة
+      if (typeof imageData !== 'string' || imageData.length === 0) {
+        return res.status(400).json({ message: "بيانات الصورة غير صالحة" });
+      }
+
       const result = await db.insert(images).values({
         imageData,
         mimeType,
       });
 
-      res.json({ id: result[0].insertId });
+      const insertId = result[0].insertId;
+      
+      if (!insertId) {
+        throw new Error("فشل في الحصول على معرف الصورة");
+      }
+
+      res.json({ id: insertId });
     } catch (error: any) {
       console.error("Error uploading image:", error);
       res.status(500).json({ message: error.message || "فشل في رفع الصورة" });

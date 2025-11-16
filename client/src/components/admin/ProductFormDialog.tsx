@@ -112,7 +112,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/sheep"] });
-      
+
       toast({
         title: sheep ? "تم التحديث بنجاح" : "تم الإضافة بنجاح",
         description: sheep ? "تم تحديث المنتج" : "تم إضافة المنتج",
@@ -132,14 +132,36 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
+    if (!file) {
       toast({
         title: "خطأ",
         description: "يرجى اختيار ملف صورة",
         variant: "destructive",
       });
+      return;
+    }
+
+    // التحقق من نوع الملف
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      toast({
+        title: "خطأ",
+        description: "نوع الملف غير مدعوم. الرجاء اختيار صورة بصيغة JPG, PNG, GIF, WebP أو BMP",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
+    }
+
+    // التحقق من حجم الملف (الحد الأقصى 5 ميجابايت)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "خطأ",
+        description: "حجم الصورة كبير جداً. الحد الأقصى هو 5 ميجابايت",
+        variant: "destructive",
+      });
+      e.target.value = "";
       return;
     }
 
@@ -150,15 +172,16 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
       const newImage = { id: imageId, url: imageUrl };
       const updatedImages = [...imageData, newImage];
       const updatedIds = updatedImages.map(img => img.id);
-      
+
       setImageData(updatedImages);
       form.setValue("imageIds", updatedIds);
-      
+
       toast({
         title: "نجاح",
         description: "تم رفع الصورة بنجاح",
       });
     } catch (error: any) {
+      console.error("Error uploading image:", error);
       toast({
         title: "خطأ",
         description: error.message || "فشل رفع الصورة",
@@ -286,7 +309,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
             {/* Images */}
             <div className="space-y-2">
               <FormLabel>الصور *</FormLabel>
-              
+
               <div className="flex gap-2">
                 <Input
                   type="file"
