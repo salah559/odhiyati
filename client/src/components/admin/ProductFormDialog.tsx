@@ -77,7 +77,11 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
         description: sheep.description,
         isFeatured: sheep.isFeatured,
       });
-      setImageData(sheep.images);
+      const imagesWithUrls = (sheep as any).images?.map((img: any) => ({
+        id: img.id,
+        url: img.url
+      })) || [];
+      setImageData(imagesWithUrls);
     } else {
       form.reset({
         name: "",
@@ -248,8 +252,8 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
                       <Input
                         type="number"
                         placeholder="50000"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        value={field.value}
+                        onChange={(e) => field.onChange(e.target.value)}
                         data-testid="input-price"
                       />
                     </FormControl>
@@ -268,8 +272,8 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
                       <Input
                         type="number"
                         placeholder="0"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        value={field.value}
+                        onChange={(e) => field.onChange(e.target.value)}
                         data-testid="input-discount"
                       />
                     </FormControl>
