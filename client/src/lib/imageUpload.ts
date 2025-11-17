@@ -68,7 +68,7 @@ export async function uploadImageToDatabase(file: File): Promise<{ id: number; i
     });
 
     // رفع الصورة إلى السيرفر
-    const response = await fetch('/api/images/upload', {
+    const response = await fetch('/api/images', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
