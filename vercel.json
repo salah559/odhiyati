@@ -1,21 +1,21 @@
+
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
-  "framework": "vite",
-  "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 30,
-      "memory": 1024
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/api/index"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
     }
   ],
   "headers": [
