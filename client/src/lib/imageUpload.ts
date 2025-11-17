@@ -1,5 +1,5 @@
 
-const IMGBB_API_KEY = "7c6b3c52e8f52a89ff9f1fcf9c5b4f7e"; // مفتاح API عام للتجربة
+const IMGBB_API_KEY = "caf89c5bb76bf12707faa97909e47101"; // مفتاح API عام للتجربة
 
 export async function uploadImage(file: File): Promise<string> {
   try {
