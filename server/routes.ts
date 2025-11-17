@@ -49,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-      
+
       const formData = new URLSearchParams();
       formData.append('key', process.env.IMGBB_API_KEY || '');
       formData.append('image', base64Data);
@@ -68,7 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const imgbbData = await imgbbResponse.json();
-      
+
       if (!imgbbData.success || !imgbbData.data) {
         throw new Error('فشل في رفع الصورة إلى ImgBB');
       }
@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const insertId = result[0].insertId;
-      
+
       if (!insertId) {
         throw new Error("فشل في الحصول على معرف الصورة");
       }
@@ -233,64 +233,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/sheep", async (req, res) => {
+  app.get("/api/sheep", async (_req, res) => {
     try {
       const allSheep = await db.select().from(sheep);
 
-      const sheepWithImages = await Promise.all(allSheep.map(async (s) => {
-        let imageUrls: string[] = [];
-        
-        if (s.imageIds && Array.isArray(s.imageIds) && s.imageIds.length > 0) {
-          const validIds = s.imageIds.filter(id => typeof id === 'number' && id > 0);
-          
-          if (validIds.length > 0) {
-            const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
-            imageUrls = imageRecords.map(img => img.imageUrl);
-          }
-        }
+      // For each sheep, convert image IDs to URLs
+      const sheepWithImages = await Promise.all(
+        allSheep.map(async (s) => {
+          let imageUrls: string[] = [];
 
-        return {
-          ...s,
-          images: imageUrls,
-        };
-      }));
+          if (s.images) {
+            try {
+              // Parse the images field (it could be JSON string or array)
+              const imageIds = typeof s.images === 'string' 
+                ? JSON.parse(s.images) 
+                : s.images;
+
+              if (Array.isArray(imageIds) && imageIds.length > 0) {
+                // Check if first element is a number (ID) or URL
+                if (typeof imageIds[0] === 'number') {
+                  // Fetch image URLs from images table
+                  const imageRecords = await db
+                    .select()
+                    .from(images)
+                    .where(inArray(images.id, imageIds));
+
+                  imageUrls = imageRecords.map(img => img.imageUrl);
+                } else {
+                  // Already URLs
+                  imageUrls = imageIds;
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing images for sheep:', s.id, e);
+              imageUrls = [];
+            }
+          }
+
+          return {
+            ...s,
+            images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400']
+          };
+        })
+      );
 
       res.json(sheepWithImages);
     } catch (error: any) {
-      console.error("Error fetching sheep:", error);
-      res.status(500).json({ message: error.message || "Internal server error" });
+      res.status(500).json({ error: error.message });
     }
   });
 
   app.get("/api/sheep/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      const [sheepItem] = await db.select().from(sheep).where(eq(sheep.id, parseInt(id))).limit(1);
+      const result = await db
+        .select()
+        .from(sheep)
+        .where(eq(sheep.id, parseInt(req.params.id)))
+        .limit(1);
 
-      if (!sheepItem) {
-        return res.status(404).json({ message: "المنتج غير موجود" });
+      if (result.length === 0) {
+        return res.status(404).json({ error: "Sheep not found" });
       }
 
+      const s = result[0];
       let imageUrls: string[] = [];
-      
-      if (sheepItem.imageIds && Array.isArray(sheepItem.imageIds) && sheepItem.imageIds.length > 0) {
-        const validIds = sheepItem.imageIds.filter(id => typeof id === 'number' && id > 0);
-        
-        if (validIds.length > 0) {
-          const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
-          imageUrls = imageRecords.map(img => img.imageUrl);
+
+      if (s.images) {
+        try {
+          // Parse the images field (it could be JSON string or array)
+          const imageIds = typeof s.images === 'string' 
+            ? JSON.parse(s.images) 
+            : s.images;
+
+          if (Array.isArray(imageIds) && imageIds.length > 0) {
+            // Check if first element is a number (ID) or URL
+            if (typeof imageIds[0] === 'number') {
+              // Fetch image URLs from images table
+              const imageRecords = await db
+                .select()
+                .from(images)
+                .where(inArray(images.id, imageIds));
+
+              imageUrls = imageRecords.map(img => img.imageUrl);
+            } else {
+              // Already URLs
+              imageUrls = imageIds;
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing images for sheep:', s.id, e);
+          imageUrls = [];
         }
       }
 
-      const sheepWithImages = {
-        ...sheepItem,
-        images: imageUrls,
-      };
-
-      res.json(sheepWithImages);
+      res.json({
+        ...s,
+        images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400']
+      });
     } catch (error: any) {
-      console.error("Error fetching sheep:", error);
-      res.status(500).json({ message: error.message || "Internal server error" });
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -315,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let imageUrls: string[] = [];
       if (newSheep.imageIds && Array.isArray(newSheep.imageIds) && newSheep.imageIds.length > 0) {
         const validIds = newSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
-        
+
         if (validIds.length > 0) {
           const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
           imageUrls = imageRecords.map(img => img.imageUrl);
@@ -354,7 +395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let imageUrls: string[] = [];
       if (updatedSheep.imageIds && Array.isArray(updatedSheep.imageIds) && updatedSheep.imageIds.length > 0) {
         const validIds = updatedSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
-        
+
         if (validIds.length > 0) {
           const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
           imageUrls = imageRecords.map(img => img.imageUrl);
