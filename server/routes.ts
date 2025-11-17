@@ -50,7 +50,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
 
-      const apiKey = process.env.IMGBB_API_KEY || 'caf89c5bb76bf12707faa97909e47101';
+      const apiKey = process.env.IMGBB_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: 'مفتاح IMGBB_API_KEY غير موجود في متغيرات البيئة' });
+      }
       
       const formData = new URLSearchParams();
       formData.append('key', apiKey);
