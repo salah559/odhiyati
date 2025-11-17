@@ -238,23 +238,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSheep = await db.select().from(sheep);
 
       const sheepWithImages = await Promise.all(allSheep.map(async (s) => {
-        let imageRecords: typeof images.$inferSelect[] = [];
+        let imageUrls: string[] = [];
         
         if (s.imageIds && Array.isArray(s.imageIds) && s.imageIds.length > 0) {
           const validIds = s.imageIds.filter(id => typeof id === 'number' && id > 0);
           
           if (validIds.length > 0) {
-            imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+            const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+            imageUrls = imageRecords.map(img => img.imageUrl);
           }
         }
 
         return {
           ...s,
-          images: imageRecords.map(img => ({
-            id: img.id,
-            url: img.imageUrl,
-            thumbnailUrl: img.thumbnailUrl || img.imageUrl,
-          })),
+          images: imageUrls,
         };
       }));
 
@@ -274,23 +271,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "المنتج غير موجود" });
       }
 
-      let imageRecords: typeof images.$inferSelect[] = [];
+      let imageUrls: string[] = [];
       
       if (sheepItem.imageIds && Array.isArray(sheepItem.imageIds) && sheepItem.imageIds.length > 0) {
         const validIds = sheepItem.imageIds.filter(id => typeof id === 'number' && id > 0);
         
         if (validIds.length > 0) {
-          imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+          const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+          imageUrls = imageRecords.map(img => img.imageUrl);
         }
       }
 
       const sheepWithImages = {
         ...sheepItem,
-        images: imageRecords.map(img => ({
-          id: img.id,
-          url: img.imageUrl,
-          thumbnailUrl: img.thumbnailUrl || img.imageUrl,
-        })),
+        images: imageUrls,
       };
 
       res.json(sheepWithImages);
@@ -318,22 +312,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const [newSheep] = await db.select().from(sheep).where(eq(sheep.id, result[0].insertId)).limit(1);
 
-      let imageRecords: typeof images.$inferSelect[] = [];
+      let imageUrls: string[] = [];
       if (newSheep.imageIds && Array.isArray(newSheep.imageIds) && newSheep.imageIds.length > 0) {
         const validIds = newSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
         
         if (validIds.length > 0) {
-          imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+          const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+          imageUrls = imageRecords.map(img => img.imageUrl);
         }
       }
 
       const sheepWithImages = {
         ...newSheep,
-        images: imageRecords.map(img => ({
-          id: img.id,
-          url: img.imageUrl,
-          thumbnailUrl: img.thumbnailUrl || img.imageUrl,
-        })),
+        images: imageUrls,
       };
 
       res.json(sheepWithImages);
@@ -360,22 +351,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const [updatedSheep] = await db.select().from(sheep).where(eq(sheep.id, parseInt(id))).limit(1);
 
-      let imageRecords: typeof images.$inferSelect[] = [];
+      let imageUrls: string[] = [];
       if (updatedSheep.imageIds && Array.isArray(updatedSheep.imageIds) && updatedSheep.imageIds.length > 0) {
         const validIds = updatedSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
         
         if (validIds.length > 0) {
-          imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+          const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
+          imageUrls = imageRecords.map(img => img.imageUrl);
         }
       }
 
       const sheepWithImages = {
         ...updatedSheep,
-        images: imageRecords.map(img => ({
-          id: img.id,
-          url: img.imageUrl,
-          thumbnailUrl: img.thumbnailUrl || img.imageUrl,
-        })),
+        images: imageUrls,
       };
 
       res.json(sheepWithImages);
