@@ -81,8 +81,14 @@ export async function uploadImageToDatabase(file: File): Promise<{ id: number; i
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'فشل رفع الصورة');
+      let errorMessage = 'فشل رفع الصورة';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        console.error('خطأ في تحليل رسالة الخطأ:', e);
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
@@ -90,8 +96,11 @@ export async function uploadImageToDatabase(file: File): Promise<{ id: number; i
       id: data.id,
       imageUrl: data.imageUrl,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('خطأ في رفع الصورة:', error);
+    if (error.message === 'فشل رفع الصورة' || error.message.includes('JSON')) {
+      throw new Error('فشل رفع الصورة. تأكد من اتصالك بالإنترنت وحاول مرة أخرى');
+    }
     throw error;
   }
 }
