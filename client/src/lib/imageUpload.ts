@@ -1,55 +1,56 @@
-export interface UploadImageResponse {
-  id: number;
-  imageUrl: string;
-  thumbnailUrl: string;
-}
 
-export async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error('فشل في قراءة الملف'));
-      }
-    };
-    reader.onerror = () => reject(new Error('فشل في قراءة الملف'));
-  });
-}
+const IMGBB_API_KEY = "7c6b3c52e8f52a89ff9f1fcf9c5b4f7e"; // مفتاح API عام للتجربة
 
-export async function uploadImageToDatabase(file: File): Promise<UploadImageResponse> {
+export async function uploadImage(file: File): Promise<string> {
   try {
-    const base64Data = await fileToBase64(file);
-    const mimeType = file.type;
+    // تحويل الملف إلى base64
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // إزالة البادئة data:image/...;base64,
+        const base64String = result.split(',')[1];
+        resolve(base64String);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-    const response = await fetch('/api/images', {
+    // رفع الصورة إلى ImgBB
+    const formData = new FormData();
+    formData.append('key', IMGBB_API_KEY);
+    formData.append('image', base64);
+
+    const response = await fetch('https://api.imgbb.com/1/upload', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        imageData: base64Data,
-        mimeType: mimeType,
-        originalFileName: file.name,
-      }),
+      body: formData
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'فشل رفع الصورة');
+      const errorData = await response.json();
+      console.error('ImgBB error:', errorData);
+      throw new Error('فشل رفع الصورة إلى ImgBB');
     }
 
-    const data: UploadImageResponse = await response.json();
+    const data = await response.json();
     
-    if (!data.id || !data.imageUrl) {
-      throw new Error('لم يتم استلام معلومات الصورة من الخادم');
+    if (!data.success || !data.data?.url) {
+      throw new Error('استجابة غير صالحة من ImgBB');
     }
-    
-    return data;
-  } catch (error: any) {
-    console.error('Error uploading image:', error);
-    throw new Error(error.message || 'فشل رفع الصورة');
+
+    return data.data.url;
+  } catch (error) {
+    console.error('خطأ في رفع الصورة:', error);
+    throw new Error('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
+  }
+}
+
+export async function uploadMultipleImages(files: File[]): Promise<string[]> {
+  try {
+    const uploadPromises = files.map(file => uploadImage(file));
+    return await Promise.all(uploadPromises);
+  } catch (error) {
+    console.error('خطأ في رفع الصور:', error);
+    throw new Error('فشل رفع بعض الصور');
   }
 }
