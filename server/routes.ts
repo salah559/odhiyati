@@ -194,8 +194,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admins/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      const adminId = parseInt(id);
 
-      const [admin] = await db.select().from(admins).where(eq(admins.id, id)).limit(1);
+      const [admin] = await db.select().from(admins).where(eq(admins.id, adminId)).limit(1);
 
       if (!admin) {
         return res.status(404).json({ message: "المدير غير موجود" });
@@ -205,7 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "لا يمكن حذف المدير الرئيسي" });
       }
 
-      await db.delete(admins).where(eq(admins.id, id));
+      await db.delete(admins).where(eq(admins.id, adminId));
       res.json({ message: "تم الحذف بنجاح" });
     } catch (error: any) {
       console.error("Error deleting admin:", error);
@@ -237,10 +238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSheep = await db.select().from(sheep);
 
       const sheepWithImages = await Promise.all(allSheep.map(async (s) => {
-        let imageRecords = [];
+        let imageRecords: typeof images.$inferSelect[] = [];
         
         if (s.imageIds && Array.isArray(s.imageIds) && s.imageIds.length > 0) {
-          // Filter out any non-numeric values and ensure we have valid IDs
           const validIds = s.imageIds.filter(id => typeof id === 'number' && id > 0);
           
           if (validIds.length > 0) {
@@ -252,7 +252,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...s,
           images: imageRecords.map(img => ({
             id: img.id,
-            url: `data:${img.mimeType};base64,${img.imageData}`,
+            url: img.imageUrl,
+            thumbnailUrl: img.thumbnailUrl || img.imageUrl,
           })),
         };
       }));
@@ -273,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "المنتج غير موجود" });
       }
 
-      let imageRecords = [];
+      let imageRecords: typeof images.$inferSelect[] = [];
       
       if (sheepItem.imageIds && Array.isArray(sheepItem.imageIds) && sheepItem.imageIds.length > 0) {
         const validIds = sheepItem.imageIds.filter(id => typeof id === 'number' && id > 0);
@@ -287,7 +288,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...sheepItem,
         images: imageRecords.map(img => ({
           id: img.id,
-          url: `data:${img.mimeType};base64,${img.imageData}`,
+          url: img.imageUrl,
+          thumbnailUrl: img.thumbnailUrl || img.imageUrl,
         })),
       };
 
@@ -316,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const [newSheep] = await db.select().from(sheep).where(eq(sheep.id, result[0].insertId)).limit(1);
 
-      let imageRecords = [];
+      let imageRecords: typeof images.$inferSelect[] = [];
       if (newSheep.imageIds && Array.isArray(newSheep.imageIds) && newSheep.imageIds.length > 0) {
         const validIds = newSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
         
@@ -329,7 +331,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...newSheep,
         images: imageRecords.map(img => ({
           id: img.id,
-          url: `data:${img.mimeType};base64,${img.imageData}`,
+          url: img.imageUrl,
+          thumbnailUrl: img.thumbnailUrl || img.imageUrl,
         })),
       };
 
@@ -357,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const [updatedSheep] = await db.select().from(sheep).where(eq(sheep.id, parseInt(id))).limit(1);
 
-      let imageRecords = [];
+      let imageRecords: typeof images.$inferSelect[] = [];
       if (updatedSheep.imageIds && Array.isArray(updatedSheep.imageIds) && updatedSheep.imageIds.length > 0) {
         const validIds = updatedSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
         
@@ -370,7 +373,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...updatedSheep,
         images: imageRecords.map(img => ({
           id: img.id,
-          url: `data:${img.mimeType};base64,${img.imageData}`,
+          url: img.imageUrl,
+          thumbnailUrl: img.thumbnailUrl || img.imageUrl,
         })),
       };
 

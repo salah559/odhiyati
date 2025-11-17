@@ -167,9 +167,8 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
 
     setIsUploadingImage(true);
     try {
-      const imageId = await uploadImageToDatabase(file);
-      const imageUrl = URL.createObjectURL(file);
-      const newImage = { id: imageId, url: imageUrl };
+      const uploadedImage = await uploadImageToDatabase(file);
+      const newImage = { id: uploadedImage.id, url: uploadedImage.imageUrl };
       const updatedImages = [...imageData, newImage];
       const updatedIds = updatedImages.map(img => img.id);
 
@@ -178,7 +177,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
 
       toast({
         title: "نجاح",
-        description: "تم رفع الصورة بنجاح",
+        description: "تم رفع الصورة بنجاح إلى ImgBB",
       });
     } catch (error: any) {
       console.error("Error uploading image:", error);

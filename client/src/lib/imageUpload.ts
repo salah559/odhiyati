@@ -1,5 +1,7 @@
 export interface UploadImageResponse {
   id: number;
+  imageUrl: string;
+  thumbnailUrl: string;
 }
 
 export async function fileToBase64(file: File): Promise<string> {
@@ -8,8 +10,7 @@ export async function fileToBase64(file: File): Promise<string> {
     reader.readAsDataURL(file);
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        const base64 = reader.result.split(',')[1];
-        resolve(base64);
+        resolve(reader.result);
       } else {
         reject(new Error('فشل في قراءة الملف'));
       }
@@ -18,7 +19,7 @@ export async function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export async function uploadImageToDatabase(file: File): Promise<number> {
+export async function uploadImageToDatabase(file: File): Promise<UploadImageResponse> {
   try {
     const base64Data = await fileToBase64(file);
     const mimeType = file.type;
@@ -31,6 +32,7 @@ export async function uploadImageToDatabase(file: File): Promise<number> {
       body: JSON.stringify({
         imageData: base64Data,
         mimeType: mimeType,
+        originalFileName: file.name,
       }),
     });
 
@@ -41,11 +43,11 @@ export async function uploadImageToDatabase(file: File): Promise<number> {
 
     const data: UploadImageResponse = await response.json();
     
-    if (!data.id) {
-      throw new Error('لم يتم استلام معرف الصورة من الخادم');
+    if (!data.id || !data.imageUrl) {
+      throw new Error('لم يتم استلام معلومات الصورة من الخادم');
     }
     
-    return data.id;
+    return data;
   } catch (error: any) {
     console.error('Error uploading image:', error);
     throw new Error(error.message || 'فشل رفع الصورة');
