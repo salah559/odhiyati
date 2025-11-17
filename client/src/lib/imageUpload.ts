@@ -54,3 +54,44 @@ export async function uploadMultipleImages(files: File[]): Promise<string[]> {
     throw new Error('فشل رفع بعض الصور');
   }
 }
+
+export async function uploadImageToDatabase(file: File): Promise<{ id: number; imageUrl: string }> {
+  try {
+    // تحويل الملف إلى base64
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    // رفع الصورة إلى السيرفر
+    const response = await fetch('/api/images/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        imageData: base64,
+        mimeType: file.type,
+        originalFileName: file.name,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'فشل رفع الصورة');
+    }
+
+    const data = await response.json();
+    return {
+      id: data.id,
+      imageUrl: data.imageUrl,
+    };
+  } catch (error) {
+    console.error('خطأ في رفع الصورة:', error);
+    throw error;
+  }
+}
