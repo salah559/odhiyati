@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,10 @@ export function ImageUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    setImages(existingImages);
+  }, [JSON.stringify(existingImages)]);
+
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       return new Promise<UploadedImage>((resolve, reject) => {
@@ -40,15 +44,13 @@ export function ImageUpload({
         reader.onload = async () => {
           try {
             const base64 = reader.result as string;
-            const response = await apiRequest("/api/images", {
-              method: "POST",
-              body: JSON.stringify({
-                imageData: base64,
-                mimeType: file.type,
-                originalFileName: file.name,
-              }),
+            const response = await apiRequest("/api/images", "POST", {
+              imageData: base64,
+              mimeType: file.type,
+              originalFileName: file.name,
             });
-            resolve(response);
+            const data = await response.json();
+            resolve(data);
           } catch (error) {
             reject(error);
           }
