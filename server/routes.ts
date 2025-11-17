@@ -33,26 +33,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/images", async (req, res) => {
     try {
-      const { imageData, mimeType } = req.body;
+      const { imageData, mimeType, originalFileName } = req.body;
 
       if (!imageData || !mimeType) {
         return res.status(400).json({ message: "بيانات الصورة مطلوبة" });
       }
 
-      // التحقق من نوع الصورة
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
       if (!allowedTypes.includes(mimeType.toLowerCase())) {
         return res.status(400).json({ message: "نوع الصورة غير مدعوم" });
       }
 
-      // التحقق من أن البيانات base64 صالحة
       if (typeof imageData !== 'string' || imageData.length === 0) {
         return res.status(400).json({ message: "بيانات الصورة غير صالحة" });
       }
 
+      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+      
+      const formData = new URLSearchParams();
+      formData.append('key', process.env.IMGBB_API_KEY || '');
+      formData.append('image', base64Data);
+      if (originalFileName) {
+        formData.append('name', originalFileName);
+      }
+
+      const imgbbResponse = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!imgbbResponse.ok) {
+        const errorData = await imgbbResponse.json();
+        throw new Error(errorData.error?.message || 'فشل في رفع الصورة إلى ImgBB');
+      }
+
+      const imgbbData = await imgbbResponse.json();
+      
+      if (!imgbbData.success || !imgbbData.data) {
+        throw new Error('فشل في رفع الصورة إلى ImgBB');
+      }
+
       const result = await db.insert(images).values({
-        imageData,
+        imageUrl: imgbbData.data.url,
+        thumbnailUrl: imgbbData.data.thumb?.url || imgbbData.data.url,
+        deleteUrl: imgbbData.data.delete_url,
+        originalFileName: originalFileName || imgbbData.data.title || null,
         mimeType,
+        fileSize: imgbbData.data.size || null,
       });
 
       const insertId = result[0].insertId;
@@ -61,7 +88,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("فشل في الحصول على معرف الصورة");
       }
 
-      res.json({ id: insertId });
+      res.json({ 
+        id: insertId,
+        imageUrl: imgbbData.data.url,
+        thumbnailUrl: imgbbData.data.thumb?.url || imgbbData.data.url,
+      });
     } catch (error: any) {
       console.error("Error uploading image:", error);
       res.status(500).json({ message: error.message || "فشل في رفع الصورة" });
@@ -77,7 +108,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "الصورة غير موجودة" });
       }
 
-      res.json(image);
+      res.json({
+        id: image.id,
+        imageUrl: image.imageUrl,
+        thumbnailUrl: image.thumbnailUrl || image.imageUrl,
+        mimeType: image.mimeType,
+        originalFileName: image.originalFileName,
+        fileSize: image.fileSize,
+        createdAt: image.createdAt,
+      });
     } catch (error: any) {
       console.error("Error fetching image:", error);
       res.status(500).json({ message: error.message || "فشل في جلب الصورة" });

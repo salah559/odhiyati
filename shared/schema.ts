@@ -8,13 +8,24 @@ export type SheepCategory = typeof sheepCategories[number];
 
 export const images = mysqlTable("images", {
   id: serial("id").primaryKey(),
-  imageData: mediumtext("image_data").notNull(),
+  imageUrl: text("image_url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  deleteUrl: text("delete_url"),
+  originalFileName: varchar("original_file_name", { length: 255 }),
   mimeType: varchar("mime_type", { length: 100 }).notNull(),
+  fileSize: int("file_size"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type Image = typeof images.$inferSelect;
-export const insertImageSchema = createInsertSchema(images).omit({ id: true, createdAt: true });
+export const insertImageSchema = createInsertSchema(images, {
+  imageUrl: z.string().url("رابط الصورة يجب أن يكون صالحاً"),
+  thumbnailUrl: z.string().url().optional(),
+  deleteUrl: z.string().url().optional(),
+  originalFileName: z.string().optional(),
+  mimeType: z.string(),
+  fileSize: z.number().optional(),
+}).omit({ id: true, createdAt: true });
 export type InsertImage = z.infer<typeof insertImageSchema>;
 
 export const sheep = mysqlTable("sheep", {
