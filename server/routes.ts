@@ -50,8 +50,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
 
+      const apiKey = process.env.IMGBB_API_KEY || 'caf89c5bb76bf12707faa97909e47101';
+      
       const formData = new URLSearchParams();
-      formData.append('key', process.env.IMGBB_API_KEY || '');
+      formData.append('key', apiKey);
       formData.append('image', base64Data);
       if (originalFileName) {
         formData.append('name', originalFileName);
@@ -242,12 +244,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allSheep.map(async (s) => {
           let imageUrls: string[] = [];
 
-          if (s.images) {
+          if (s.imageIds) {
             try {
-              // Parse the images field (it could be JSON string or array)
-              const imageIds = typeof s.images === 'string' 
-                ? JSON.parse(s.images) 
-                : s.images;
+              // Parse the imageIds field (it could be JSON string or array)
+              const imageIds = typeof s.imageIds === 'string' 
+                ? JSON.parse(s.imageIds) 
+                : s.imageIds;
 
               if (Array.isArray(imageIds) && imageIds.length > 0) {
                 // Check if first element is a number (ID) or URL
@@ -298,12 +300,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const s = result[0];
       let imageUrls: string[] = [];
 
-      if (s.images) {
+      if (s.imageIds) {
         try {
-          // Parse the images field (it could be JSON string or array)
-          const imageIds = typeof s.images === 'string' 
-            ? JSON.parse(s.images) 
-            : s.images;
+          // Parse the imageIds field (it could be JSON string or array)
+          const imageIds = typeof s.imageIds === 'string' 
+            ? JSON.parse(s.imageIds) 
+            : s.imageIds;
 
           if (Array.isArray(imageIds) && imageIds.length > 0) {
             // Check if first element is a number (ID) or URL
