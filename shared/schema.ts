@@ -35,6 +35,7 @@ export interface Sheep {
   price: number;
   discountPercentage?: number;
   imageIds: string[];
+  images?: string[];
   age: string;
   weight: string;
   breed: string;

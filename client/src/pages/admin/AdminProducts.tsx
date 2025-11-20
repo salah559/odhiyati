@@ -98,7 +98,7 @@ export default function AdminProducts() {
             <Card key={item.id} className="overflow-hidden" data-testid={`card-product-${item.id}`}>
               <div className="relative aspect-square">
                 <img
-                  src={item.images[0]}
+                  src={item.images?.[0] || '/placeholder.jpg'}
                   alt={item.name}
                   className="w-full h-full object-cover"
                 />

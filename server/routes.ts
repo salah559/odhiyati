@@ -216,10 +216,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sheep", async (req, res) => {
     try {
       const sheepSnapshot = await db.collection('sheep').get();
-      const allSheep = sheepSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Sheep[];
+      const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc) => {
+        const sheepData = doc.data() as Sheep;
+        const imageUrls: string[] = [];
+        
+        if (sheepData.imageIds && sheepData.imageIds.length > 0) {
+          for (const imageId of sheepData.imageIds) {
+            try {
+              const imageDoc = await db.collection('images').doc(imageId).get();
+              if (imageDoc.exists) {
+                const imageData = imageDoc.data() as Image;
+                imageUrls.push(imageData.imageUrl);
+              }
+            } catch (err) {
+              console.error(`Error fetching image ${imageId}:`, err);
+            }
+          }
+        }
+        
+        return {
+          ...sheepData,
+          id: doc.id,
+          images: imageUrls,
+        };
+      }));
 
       res.json(allSheep);
     } catch (error: any) {
@@ -237,8 +257,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "الخروف غير موجود" });
       }
 
-      const sheep = { id: sheepDoc.id, ...sheepDoc.data() } as Sheep;
-      res.json(sheep);
+      const sheepData = sheepDoc.data() as Sheep;
+      const imageUrls: string[] = [];
+      
+      if (sheepData.imageIds && sheepData.imageIds.length > 0) {
+        for (const imageId of sheepData.imageIds) {
+          try {
+            const imageDoc = await db.collection('images').doc(imageId).get();
+            if (imageDoc.exists) {
+              const imageData = imageDoc.data() as Image;
+              imageUrls.push(imageData.imageUrl);
+            }
+          } catch (err) {
+            console.error(`Error fetching image ${imageId}:`, err);
+          }
+        }
+      }
+      
+      res.json({
+        ...sheepData,
+        id: sheepDoc.id,
+        images: imageUrls,
+      });
     } catch (error: any) {
       console.error("Error fetching sheep:", error);
       res.status(500).json({ message: error.message || "فشل في جلب الخروف" });
