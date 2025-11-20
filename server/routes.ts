@@ -55,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!apiKey) {
         return res.status(500).json({ message: 'مفتاح IMGBB_API_KEY غير موجود في متغيرات البيئة' });
       }
-      
+
       const formData = new URLSearchParams();
       formData.append('key', apiKey);
       formData.append('image', base64Data);
@@ -312,17 +312,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== Orders Routes ====================
-  app.get("/api/orders", async (req, res) => {
+  app.get("/api/orders", async (_req, res) => {
     try {
-      const ordersSnapshot = await db.collection('orders')
-        .orderBy('createdAt', 'desc')
-        .get();
-      
-      const orders = ordersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Order[];
-
+      const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+      const orders = ordersSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        };
+      });
       res.json(orders);
     } catch (error: any) {
       console.error("Error fetching orders:", error);
