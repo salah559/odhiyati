@@ -209,7 +209,16 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
       return;
     }
     const imageIds = imageData.map(img => img.id);
-    mutation.mutate({ ...data, imageIds });
+    
+    // تحويل السعر ونسبة الخصم إلى أرقام
+    const submitData = {
+      ...data,
+      price: Number(data.price),
+      discountPercentage: data.discountPercentage ? Number(data.discountPercentage) : 0,
+      imageIds
+    };
+    
+    mutation.mutate(submitData);
   };
 
   return (
