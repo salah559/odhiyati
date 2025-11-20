@@ -95,11 +95,11 @@ export default function ProductDetail() {
     .slice(0, 4);
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % sheep.images.length);
+    setCurrentImageIndex((prev) => (prev + 1) % (sheep.images?.length || 1));
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + sheep.images.length) % sheep.images.length);
+    setCurrentImageIndex((prev) => (prev - 1 + (sheep.images?.length || 1)) % (sheep.images?.length || 1));
   };
 
   const handleOrderSubmit = (e: React.FormEvent) => {
@@ -139,12 +139,12 @@ export default function ProductDetail() {
         {
           sheepId: sheep.id,
           sheepName: sheep.name,
-          sheepImage: sheep.images[0],
+          sheepImageId: sheep.imageIds?.[0] || "",
           price: discountedPrice || sheep.price,
           quantity: 1,
         },
       ],
-      totalAmount: discountedPrice || sheep.price,
+      totalAmount: String(discountedPrice || sheep.price),
       status: "pending" as const,
     };
 
@@ -160,12 +160,12 @@ export default function ProductDetail() {
             <Card className="overflow-hidden border-2 shadow-lg">
               <div className="relative aspect-square bg-muted">
                 <img
-                  src={sheep.images[currentImageIndex]}
+                  src={sheep.images?.[currentImageIndex] || '/placeholder.jpg'}
                   alt={`${sheep.name} - صورة ${currentImageIndex + 1}`}
                   className="w-full h-full object-cover"
                   data-testid="img-main"
                 />
-                {sheep.images.length > 1 && (
+                {(sheep.images?.length || 0) > 1 && (
                   <>
                     <Button
                       variant="secondary"
@@ -189,18 +189,18 @@ export default function ProductDetail() {
                 )}
                 
                 {/* Image Counter */}
-                {sheep.images.length > 1 && (
+                {(sheep.images?.length || 0) > 1 && (
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
-                    {currentImageIndex + 1} / {sheep.images.length}
+                    {currentImageIndex + 1} / {sheep.images?.length || 0}
                   </div>
                 )}
               </div>
             </Card>
 
             {/* Thumbnails */}
-            {sheep.images.length > 1 && (
+            {(sheep.images?.length || 0) > 1 && (
               <div className="grid grid-cols-5 gap-3 mt-4">
-                {sheep.images.map((image, index) => (
+                {sheep.images?.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}
