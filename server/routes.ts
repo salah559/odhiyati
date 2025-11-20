@@ -85,16 +85,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         originalFileName: originalFileName || imgbbData.data.title || null,
         mimeType,
         fileSize: imgbbData.data.size || null,
-      });
+      }).returning();
 
-      const insertId = result[0].insertId;
+      const insertedImage = result[0];
 
-      if (!insertId) {
+      if (!insertedImage || !insertedImage.id) {
         throw new Error("فشل في الحصول على معرف الصورة");
       }
 
       res.json({ 
-        id: insertId,
+        id: insertedImage.id,
         imageUrl: imgbbData.data.url,
         thumbnailUrl: imgbbData.data.thumb?.url || imgbbData.data.url,
       });
