@@ -1,12 +1,11 @@
-
-import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 import * as schema from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is required. Format: mysql://user:password@host/database");
+  throw new Error("DATABASE_URL is required. Format: postgresql://user:password@host/database");
 }
 
-const connection = mysql.createPool(process.env.DATABASE_URL.trim());
+const sql = neon(process.env.DATABASE_URL.trim());
 
-export const db = drizzle(connection, { schema, mode: "default" });
+export const db = drizzle(sql, { schema });

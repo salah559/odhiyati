@@ -1,19 +1,19 @@
 import { z } from "zod";
-import { mysqlTable, varchar, decimal, json, boolean, timestamp, text, int, mediumtext, serial } from "drizzle-orm/mysql-core";
+import { pgTable, varchar, decimal, json, boolean, timestamp, text, integer, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 
 export const sheepCategories = ["محلي", "روماني", "إسباني"] as const;
 export type SheepCategory = typeof sheepCategories[number];
 
-export const images = mysqlTable("images", {
+export const images = pgTable("images", {
   id: serial("id").primaryKey(),
   imageUrl: text("image_url").notNull(),
   thumbnailUrl: text("thumbnail_url"),
   deleteUrl: text("delete_url"),
   originalFileName: varchar("original_file_name", { length: 255 }),
   mimeType: varchar("mime_type", { length: 100 }).notNull(),
-  fileSize: int("file_size"),
+  fileSize: integer("file_size"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -28,7 +28,7 @@ export const insertImageSchema = createInsertSchema(images, {
 }).omit({ id: true, createdAt: true });
 export type InsertImage = z.infer<typeof insertImageSchema>;
 
-export const sheep = mysqlTable("sheep", {
+export const sheep = pgTable("sheep", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   category: varchar("category", { length: 50 }).notNull(),
@@ -42,7 +42,7 @@ export const sheep = mysqlTable("sheep", {
   description: text("description").notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Sheep = typeof sheep.$inferSelect;
@@ -65,14 +65,14 @@ export type InsertSheep = z.infer<typeof insertSheepSchema>;
 export const orderStatuses = ["pending", "processing", "completed", "cancelled"] as const;
 export type OrderStatus = typeof orderStatuses[number];
 
-export const orders = mysqlTable("orders", {
+export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 128 }),
   userName: varchar("user_name", { length: 255 }).notNull(),
   userPhone: varchar("user_phone", { length: 20 }).notNull(),
   wilayaCode: varchar("wilaya_code", { length: 10 }).notNull(),
   wilayaName: varchar("wilaya_name", { length: 100 }).notNull(),
-  communeId: int("commune_id").notNull(),
+  communeId: integer("commune_id").notNull(),
   communeName: varchar("commune_name", { length: 100 }).notNull(),
   items: json("items").$type<{
     sheepId: number;
@@ -85,7 +85,7 @@ export const orders = mysqlTable("orders", {
   status: varchar("status", { length: 20 }).notNull().default("pending"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Order = typeof orders.$inferSelect;
@@ -111,7 +111,7 @@ export const insertOrderSchema = createInsertSchema(orders, {
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
-export const admins = mysqlTable("admins", {
+export const admins = pgTable("admins", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   role: varchar("role", { length: 20 }).notNull().default("secondary"),
@@ -135,9 +135,9 @@ export interface User {
   adminRole?: "primary" | "secondary";
 }
 
-export const discounts = mysqlTable("discounts", {
+export const discounts = pgTable("discounts", {
   id: serial("id").primaryKey(),
-  sheepId: int("sheep_id").notNull(),
+  sheepId: integer("sheep_id").notNull(),
   percentage: decimal("percentage", { precision: 5, scale: 2 }).notNull(),
   validFrom: timestamp("valid_from").notNull(),
   validTo: timestamp("valid_to").notNull(),
