@@ -32,8 +32,8 @@ export interface Sheep {
   id: string;
   name: string;
   category: SheepCategory;
-  price: string;
-  discountPercentage?: string;
+  price: number;
+  discountPercentage?: number;
   imageIds: number[];
   age: string;
   weight: string;
@@ -48,8 +48,8 @@ export interface Sheep {
 export const insertSheepSchema = z.object({
   name: z.string().min(1, "اسم الخروف مطلوب"),
   category: z.enum(sheepCategories),
-  price: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "السعر يجب أن يكون موجباً"),
-  discountPercentage: z.string().optional().refine((val) => !val || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), "النسبة يجب أن تكون بين 0 و 100"),
+  price: z.number().min(0, "السعر يجب أن يكون موجباً"),
+  discountPercentage: z.number().min(0).max(100, "النسبة يجب أن تكون بين 0 و 100").optional(),
   imageIds: z.array(z.number()).min(1, "يجب إضافة صورة واحدة على الأقل"),
   age: z.string().min(1, "العمر مطلوب"),
   weight: z.string().min(1, "الوزن مطلوب"),
