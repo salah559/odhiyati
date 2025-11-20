@@ -34,7 +34,7 @@ export interface Sheep {
   category: SheepCategory;
   price: number;
   discountPercentage?: number;
-  imageIds: number[];
+  imageIds: string[];
   age: string;
   weight: string;
   breed: string;
@@ -50,7 +50,7 @@ export const insertSheepSchema = z.object({
   category: z.enum(sheepCategories),
   price: z.number().min(0, "السعر يجب أن يكون موجباً"),
   discountPercentage: z.number().min(0).max(100, "النسبة يجب أن تكون بين 0 و 100").optional(),
-  imageIds: z.array(z.number()).min(1, "يجب إضافة صورة واحدة على الأقل"),
+  imageIds: z.array(z.string()).min(1, "يجب إضافة صورة واحدة على الأقل"),
   age: z.string().min(1, "العمر مطلوب"),
   weight: z.string().min(1, "الوزن مطلوب"),
   breed: z.string().min(1, "السلالة مطلوبة"),
@@ -75,9 +75,9 @@ export interface Order {
   communeId: number;
   communeName: string;
   items: {
-    sheepId: number;
+    sheepId: string;
     sheepName: string;
-    sheepImageId: number;
+    sheepImageId: string;
     price: number;
     quantity: number;
   }[];
@@ -97,9 +97,9 @@ export const insertOrderSchema = z.object({
   communeId: z.number().min(1, "البلدية مطلوبة"),
   communeName: z.string().min(1, "البلدية مطلوبة"),
   items: z.array(z.object({
-    sheepId: z.number(),
+    sheepId: z.string(),
     sheepName: z.string(),
-    sheepImageId: z.number(),
+    sheepImageId: z.string(),
     price: z.number(),
     quantity: z.number().min(1),
   })).min(1, "يجب إضافة منتج واحد على الأقل"),

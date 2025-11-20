@@ -42,7 +42,7 @@ interface ProductFormDialogProps {
 
 export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDialogProps) {
   const { toast } = useToast();
-  const [imageData, setImageData] = useState<{ id: number; url: string }[]>([]);
+  const [imageData, setImageData] = useState<{ id: string; url: string }[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const form = useForm<InsertSheep>({
