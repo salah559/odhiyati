@@ -10,7 +10,26 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  const db = getDb();
+  // Initialize Firestore - lazy initialization per request in serverless
+  let db: any;
+  
+  const ensureDb = () => {
+    if (!db) {
+      db = getDb();
+    }
+    return db;
+  };
+  
+  // Middleware to ensure db is initialized for each request
+  app.use((req, res, next) => {
+    try {
+      ensureDb();
+      next();
+    } catch (error) {
+      console.error('Failed to initialize Firestore:', error);
+      res.status(500).json({ message: 'Database initialization failed' });
+    }
+  });
 
   app.get("/api/download-app", (req, res) => {
     try {
