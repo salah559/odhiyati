@@ -5,11 +5,12 @@
 
 ## آخر التحديثات (November 2025)
 
-### الترحيل إلى PostgreSQL (20 نوفمبر 2025)
-- 🎉 **الترحيل من MySQL إلى PostgreSQL**: تحديث كامل لقاعدة البيانات
-  - استخدام PostgreSQL بدلاً من MySQL لتوافق أفضل مع Replit
-  - تحديث Drizzle ORM لاستخدام postgres-js
-  - جميع الجداول والعلاقات تم ترحيلها بنجاح
+### الترحيل إلى Firestore (20 نوفمبر 2025)
+- 🎉 **الترحيل الكامل إلى Firestore**: تحديث شامل لقاعدة البيانات
+  - إزالة PostgreSQL/MySQL و Drizzle ORM بالكامل
+  - استخدام Firebase Firestore كقاعدة بيانات رئيسية
+  - جميع API endpoints تم تحديثها للعمل مع Firestore
+  - تكامل مع Firebase Admin SDK
 - ✅ **Firebase Authentication مُفعّل**: نظام تسجيل الدخول يعمل بشكل كامل
 - ✅ **جميع API Endpoints تعمل بشكل صحيح**
 - ✅ **التطبيق جاهز للاستخدام الفوري**
@@ -17,11 +18,11 @@
 ### تكامل ImgBB لرفع الصور (17 نوفمبر 2025)
 - 🎉 **تكامل ImgBB API**: نظام رفع صور احترافي
   - رفع الصور إلى خادم ImgBB السحابي
-  - تخزين روابط الصور في MySQL (بدلاً من البيانات الثنائية)
+  - تخزين روابط الصور في Firestore (بدلاً من البيانات الثنائية)
   - حفظ thumbnail و delete URL لكل صورة
   - دعم الصور حتى 10MB
 - ✅ **تحديث نموذج قاعدة البيانات**:
-  - جدول `images` جديد لتخزين معلومات الصور
+  - مجموعة `images` جديدة لتخزين معلومات الصور
   - روابط ImgBB بدلاً من base64
 - ✅ **API endpoints جديدة**:
   - `POST /api/images` - رفع صورة إلى ImgBB
@@ -67,7 +68,8 @@
 
 ### Backend
 - **Express.js** - خادم Node.js
-- **PostgreSQL** - قاعدة بيانات علائقية (Drizzle ORM مع postgres-js)
+- **Firebase Firestore** - قاعدة بيانات NoSQL سحابية
+- **Firebase Admin SDK** - للتعامل مع Firestore من السيرفر
 - **ImgBB API** - خدمة رفع الصور السحابية
 - **Firebase Authentication** - نظام تسجيل دخول آمن
 
@@ -112,6 +114,7 @@
 │   └── index.html
 ├── server/                   # Backend Express
 │   ├── routes.ts            # API endpoints
+│   ├── firestore.ts         # Firestore initialization
 │   └── index.ts
 ├── shared/                   # Shared types
 │   └── schema.ts            # Data models & Zod schemas
@@ -121,8 +124,8 @@
 ## API Endpoints
 
 ### Images (الصور)
-- `POST /api/images` - رفع صورة إلى ImgBB
-- `DELETE /api/images/:id` - حذف صورة من ImgBB و MySQL
+- `POST /api/images` - رفع صورة إلى ImgBB وحفظها في Firestore
+- `GET /api/images/:id` - جلب معلومات صورة
 
 ### Sheep (المنتجات)
 - `GET /api/sheep` - جلب جميع المنتجات
@@ -133,154 +136,96 @@
 
 ### Orders (الطلبات)
 - `GET /api/orders` - جلب جميع الطلبات (Admin only)
+- `GET /api/orders/:id` - جلب طلب واحد
 - `POST /api/orders` - إنشاء طلب جديد
 - `PATCH /api/orders/:id` - تحديث حالة الطلب (Admin only)
+- `DELETE /api/orders/:id` - حذف طلب (Admin only)
 
 ### Admins (المدراء)
 - `GET /api/admins` - جلب قائمة المدراء (Primary Admin only)
+- `GET /api/admins/check` - التحقق من صلاحيات المستخدم
 - `POST /api/admins` - إضافة مدير جديد (Primary Admin only)
 - `DELETE /api/admins/:id` - إزالة مدير (Primary Admin only)
 
 ## النشر على Replit (Current Platform)
 
 ### المتطلبات المكتملة
-1. ✅ ImgBB API Key - تم إعداد `IMGBB_API_KEY` في Secrets
-2. ✅ MySQL Database - تم إعداد `DATABASE_URL` 
-3. ✅ Development Workflow - تم إعداد `npm run dev` للتشغيل على المنفذ 5000
-4. ✅ Deployment Configuration - تم إعداد autoscale مع `npm run build` و `npm run start`
+1. ✅ Firebase Service Account Key - تم إعداد `FIREBASE_SERVICE_ACCOUNT_KEY` في Secrets
+2. ✅ Firebase Config - تم إعداد `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`
+3. ✅ ImgBB API Key - تم إعداد `IMGBB_API_KEY` في Secrets (اختياري - للإدارة فقط)
+4. ✅ Development Workflow - تم إعداد `npm run dev` للتشغيل على المنفذ 5000
+5. ✅ Deployment Configuration - تم إعداد autoscale مع `npm run build` و `npm run start`
 
 ### حالة التطبيق
-✅ **التطبيق جاهز للعمل بالكامل!** البنية التحتية مكتملة ويعمل التطبيق على Replit.
+✅ **التطبيق جاهز للعمل بالكامل!** جميع الميزات تعمل مع Firestore.
 
 ### ملاحظة حول قاعدة البيانات
-التطبيق يستخدم **PostgreSQL** لتخزين البيانات:
-- جميع عمليات البيانات (الأغنام، الطلبات، المدراء، الصور) تتم عبر API endpoints في الخادم
-- يتم استخدام Drizzle ORM مع postgres-js للتعامل مع قاعدة البيانات
-- الصور يتم رفعها إلى ImgBB وتخزين الروابط في PostgreSQL
+التطبيق يستخدم **Firebase Firestore** لتخزين البيانات:
+- جميع عمليات البيانات (الأغنام، الطلبات، المدراء، الصور) تتم عبر Firestore
+- يتم استخدام Firebase Admin SDK للتعامل مع Firestore من السيرفر
+- الصور يتم رفعها إلى ImgBB وتخزين الروابط في Firestore
 - الأمان محمي بواسطة Firebase Authentication
 
 **متطلبات البيئة المطلوبة:**
-- `IMGBB_API_KEY`: مفتاح API من ImgBB لرفع الصور (اختياري - للإدارة فقط)
-- `DATABASE_URL`: رابط الاتصال بقاعدة بيانات PostgreSQL (صيغة: postgresql://user:password@host/database)
+- `FIREBASE_SERVICE_ACCOUNT_KEY`: مفتاح Service Account من Firebase (JSON كامل)
 - `VITE_FIREBASE_API_KEY`: مفتاح API من Firebase
 - `VITE_FIREBASE_PROJECT_ID`: معرّف مشروع Firebase  
 - `VITE_FIREBASE_APP_ID`: معرّف تطبيق Firebase
+- `IMGBB_API_KEY`: مفتاح API من ImgBB لرفع الصور (اختياري - للإدارة فقط)
 
-## النشر على Vercel (Previous Platform)
+## هيكل Firestore Collections
 
-### المتطلبات
-1. حساب Firebase مع:
-   - Authentication مفعّل (Google + Email/Password)
-   - Firestore Database
-   - Firebase Storage
-   - **Firestore Security Rules محدّثة** (مهم جداً!)
-2. حساب Vercel
-
-### خطوات النشر
-
-#### 1. إعداد Firebase Security Rules (خطوة حاسمة!)
-
-**يجب تطبيق هذه القواعد في Firestore قبل النشر:**
-
-```javascript
-// انسخ محتوى ملف firestore.rules والصقه في:
-// Firebase Console > Firestore Database > Rules
-
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isPrimaryAdmin() {
-      return isAuthenticated() && request.auth.token.email == 'bouazzasalah120120@gmail.com';
-    }
-    
-    function isAdmin() {
-      return isPrimaryAdmin() || 
-             (isAuthenticated() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-    }
-    
-    match /sheep/{sheepId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    
-    match /orders/{orderId} {
-      allow create: if isAuthenticated();
-      allow read, update: if isAdmin();
-      allow delete: if false;
-    }
-    
-    match /admins/{adminId} {
-      allow read: if isAdmin();
-      allow create, delete: if isPrimaryAdmin();
-      allow update: if false;
-    }
-  }
-}
+### Collections (المجموعات)
 ```
-
-#### 2. إعداد Firebase Authentication
-
-```bash
-# قم بتسجيل الدخول إلى Firebase Console
-https://console.firebase.google.com/
-
-# أضف نطاق Vercel إلى Authorized domains:
-# Authentication > Settings > Authorized domains
-# أضف: your-project.vercel.app
+firestore
+├── admins/           # المشرفون
+│   └── {id}
+│       ├── email: string
+│       ├── role: "primary" | "secondary"
+│       └── addedAt: timestamp
+│
+├── images/           # الصور
+│   └── {id}
+│       ├── imageUrl: string
+│       ├── thumbnailUrl: string
+│       ├── deleteUrl: string
+│       ├── originalFileName: string
+│       ├── mimeType: string
+│       ├── fileSize: number
+│       └── createdAt: timestamp
+│
+├── sheep/            # الأغنام
+│   └── {id}
+│       ├── name: string
+│       ├── category: string
+│       ├── price: string
+│       ├── discountPercentage: string
+│       ├── imageIds: number[]
+│       ├── age: string
+│       ├── weight: string
+│       ├── breed: string
+│       ├── healthStatus: string
+│       ├── description: string
+│       ├── isFeatured: boolean
+│       ├── createdAt: timestamp
+│       └── updatedAt: timestamp
+│
+└── orders/           # الطلبات
+    └── {id}
+        ├── userId: string
+        ├── userName: string
+        ├── userPhone: string
+        ├── wilayaCode: string
+        ├── wilayaName: string
+        ├── communeId: number
+        ├── communeName: string
+        ├── items: array
+        ├── totalAmount: string
+        ├── status: string
+        ├── notes: string
+        ├── createdAt: timestamp
+        └── updatedAt: timestamp
 ```
-
-#### 3. إعداد Vercel
-```bash
-# قم بتثبيت Vercel CLI (اختياري)
-npm i -g vercel
-
-# تسجيل الدخول
-vercel login
-
-# النشر
-vercel
-```
-
-#### 4. إعداد Environment Variables في Vercel
-في لوحة تحكم Vercel، أضف المتغيرات التالية:
-
-```
-VITE_FIREBASE_API_KEY=your-api-key
-VITE_FIREBASE_APP_ID=your-app-id
-VITE_FIREBASE_PROJECT_ID=your-project-id
-```
-
-#### 5. إعداد vercel.json
-تأكد من وجود ملف `vercel.json` في جذر المشروع:
-
-```json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist/public",
-  "framework": "vite",
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
-```
-
-### ملاحظات مهمة
-- تأكد من إضافة نطاق Vercel الخاص بك إلى Authorized domains في Firebase
-- قد تحتاج لتحديث قواعد Firestore Security Rules للإنتاج
-- استخدم Firebase Console لمراقبة الاستخدام والتكاليف
 
 ## التطوير المحلي
 
@@ -309,11 +254,12 @@ npm run dev
 ### 3. إعداد Firestore
 - أنشئ قاعدة بيانات Firestore
 - اختر الموقع الأقرب
-- ابدأ في production mode أو test mode
+- استخدم القواعد الموصى بها (انظر firestore.rules)
 
-### 4. إعداد Storage
-- فعّل Firebase Storage
-- استخدم القواعد الافتراضية أو خصصها
+### 4. إعداد Service Account
+- اذهب إلى Project Settings > Service Accounts
+- اضغط على "Generate New Private Key"
+- احفظ الملف JSON وأضفه إلى Replit Secrets كـ `FIREBASE_SERVICE_ACCOUNT_KEY`
 
 ## نموذج البيانات
 
@@ -322,18 +268,18 @@ npm run dev
 {
   id: string;
   name: string;
-  category: "كبش" | "نعجة" | "خروف";
-  price: number;
-  discountPercentage?: number;
-  images: string[];
+  category: "محلي" | "روماني" | "إسباني";
+  price: string;
+  discountPercentage?: string;
+  imageIds: number[];
   age: string;
   weight: string;
   breed: string;
   healthStatus: string;
   description: string;
   isFeatured: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
@@ -341,24 +287,56 @@ npm run dev
 ```typescript
 {
   id: string;
-  userId: string;
-  userEmail: string;
+  userId?: string;
   userName: string;
   userPhone: string;
-  items: OrderItem[];
-  totalAmount: number;
+  wilayaCode: string;
+  wilayaName: string;
+  communeId: number;
+  communeName: string;
+  items: {
+    sheepId: number;
+    sheepName: string;
+    sheepImageId: number;
+    price: number;
+    quantity: number;
+  }[];
+  totalAmount: string;
   status: "pending" | "processing" | "completed" | "cancelled";
-  shippingAddress: string;
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### Image (الصورة)
+```typescript
+{
+  id: string;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  deleteUrl?: string;
+  originalFileName?: string;
+  mimeType: string;
+  fileSize?: number;
+  createdAt: Date;
+}
+```
+
+### Admin (المشرف)
+```typescript
+{
+  id: string;
+  email: string;
+  role: "primary" | "secondary";
+  addedAt: Date;
 }
 ```
 
 ## الدعم والمساعدة
 للمشاكل التقنية أو الاستفسارات، راجع:
 - [Firebase Documentation](https://firebase.google.com/docs)
-- [Vercel Documentation](https://vercel.com/docs)
+- [Firestore Documentation](https://firebase.google.com/docs/firestore)
 - [React Documentation](https://react.dev)
 
 ## الترخيص

@@ -1,95 +1,95 @@
 import { z } from "zod";
-import { pgTable, varchar, decimal, json, boolean, timestamp, text, integer, serial } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { sql } from "drizzle-orm";
 
+// Sheep Categories
 export const sheepCategories = ["محلي", "روماني", "إسباني"] as const;
 export type SheepCategory = typeof sheepCategories[number];
 
-export const images = pgTable("images", {
-  id: serial("id").primaryKey(),
-  imageUrl: text("image_url").notNull(),
-  thumbnailUrl: text("thumbnail_url"),
-  deleteUrl: text("delete_url"),
-  originalFileName: varchar("original_file_name", { length: 255 }),
-  mimeType: varchar("mime_type", { length: 100 }).notNull(),
-  fileSize: integer("file_size"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+// Image Types
+export interface Image {
+  id: string;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  deleteUrl?: string;
+  originalFileName?: string;
+  mimeType: string;
+  fileSize?: number;
+  createdAt: Date;
+}
 
-export type Image = typeof images.$inferSelect;
-export const insertImageSchema = createInsertSchema(images, {
+export const insertImageSchema = z.object({
   imageUrl: z.string().url("رابط الصورة يجب أن يكون صالحاً"),
   thumbnailUrl: z.string().url().optional(),
   deleteUrl: z.string().url().optional(),
   originalFileName: z.string().optional(),
   mimeType: z.string(),
   fileSize: z.number().optional(),
-}).omit({ id: true, createdAt: true });
-export type InsertImage = z.infer<typeof insertImageSchema>;
-
-export const sheep = pgTable("sheep", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  category: varchar("category", { length: 50 }).notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }),
-  imageIds: json("image_ids").$type<number[]>().notNull(),
-  age: varchar("age", { length: 100 }).notNull(),
-  weight: varchar("weight", { length: 100 }).notNull(),
-  breed: varchar("breed", { length: 100 }).notNull(),
-  healthStatus: text("health_status").notNull(),
-  description: text("description").notNull(),
-  isFeatured: boolean("is_featured").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export type Sheep = typeof sheep.$inferSelect;
-export const insertSheepSchema = createInsertSchema(sheep, {
+export type InsertImage = z.infer<typeof insertImageSchema>;
+
+// Sheep Types
+export interface Sheep {
+  id: string;
+  name: string;
+  category: SheepCategory;
+  price: number;
+  discountPercentage?: number;
+  imageIds: string[];
+  images?: string[];
+  age: string;
+  weight: string;
+  breed: string;
+  healthStatus: string;
+  description: string;
+  isFeatured: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const insertSheepSchema = z.object({
   name: z.string().min(1, "اسم الخروف مطلوب"),
   category: z.enum(sheepCategories),
-  price: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "السعر يجب أن يكون موجباً"),
-  discountPercentage: z.string().optional().refine((val) => !val || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), "النسبة يجب أن تكون بين 0 و 100"),
-  imageIds: z.array(z.number()).min(1, "يجب إضافة صورة واحدة على الأقل"),
+  price: z.number().min(0, "السعر يجب أن يكون موجباً"),
+  discountPercentage: z.number().min(0).max(100, "النسبة يجب أن تكون بين 0 و 100").optional(),
+  imageIds: z.array(z.string()).min(1, "يجب إضافة صورة واحدة على الأقل"),
   age: z.string().min(1, "العمر مطلوب"),
   weight: z.string().min(1, "الوزن مطلوب"),
   breed: z.string().min(1, "السلالة مطلوبة"),
   healthStatus: z.string().min(1, "الحالة الصحية مطلوبة"),
   description: z.string().min(10, "الوصف يجب أن يكون 10 أحرف على الأقل"),
   isFeatured: z.boolean().default(false),
-}).omit({ id: true, createdAt: true, updatedAt: true });
+});
 
 export type InsertSheep = z.infer<typeof insertSheepSchema>;
 
+// Order Types
 export const orderStatuses = ["pending", "processing", "completed", "cancelled"] as const;
 export type OrderStatus = typeof orderStatuses[number];
 
-export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 128 }),
-  userName: varchar("user_name", { length: 255 }).notNull(),
-  userPhone: varchar("user_phone", { length: 20 }).notNull(),
-  wilayaCode: varchar("wilaya_code", { length: 10 }).notNull(),
-  wilayaName: varchar("wilaya_name", { length: 100 }).notNull(),
-  communeId: integer("commune_id").notNull(),
-  communeName: varchar("commune_name", { length: 100 }).notNull(),
-  items: json("items").$type<{
-    sheepId: number;
+export interface Order {
+  id: string;
+  userId?: string;
+  userName: string;
+  userPhone: string;
+  wilayaCode: string;
+  wilayaName: string;
+  communeId: number;
+  communeName: string;
+  items: {
+    sheepId: string;
     sheepName: string;
-    sheepImageId: number;
+    sheepImageId: string;
     price: number;
     quantity: number;
-  }[]>().notNull(),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: varchar("status", { length: 20 }).notNull().default("pending"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+  }[];
+  totalAmount: string;
+  status: OrderStatus;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-export type Order = typeof orders.$inferSelect;
-export const insertOrderSchema = createInsertSchema(orders, {
+export const insertOrderSchema = z.object({
   userId: z.string().optional(),
   userName: z.string().min(1, "الاسم مطلوب"),
   userPhone: z.string().min(10, "رقم الهاتف غير صالح"),
@@ -98,63 +98,30 @@ export const insertOrderSchema = createInsertSchema(orders, {
   communeId: z.number().min(1, "البلدية مطلوبة"),
   communeName: z.string().min(1, "البلدية مطلوبة"),
   items: z.array(z.object({
-    sheepId: z.number(),
+    sheepId: z.string(),
     sheepName: z.string(),
-    sheepImageId: z.number(),
+    sheepImageId: z.string(),
     price: z.number(),
     quantity: z.number().min(1),
   })).min(1, "يجب إضافة منتج واحد على الأقل"),
   totalAmount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "المبلغ غير صالح"),
   notes: z.string().optional(),
   status: z.enum(orderStatuses).default("pending"),
-}).omit({ id: true, createdAt: true, updatedAt: true });
+});
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
-export const admins = pgTable("admins", {
-  id: serial("id").primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  role: varchar("role", { length: 20 }).notNull().default("secondary"),
-  addedAt: timestamp("added_at").defaultNow().notNull(),
-});
-
-export type Admin = typeof admins.$inferSelect;
-export const insertAdminSchema = createInsertSchema(admins, {
-  email: z.string().email("البريد الإلكتروني غير صالح"),
-  role: z.enum(["primary", "secondary"]).default("secondary"),
-}).omit({ id: true, addedAt: true });
-
-export type InsertAdmin = z.infer<typeof insertAdminSchema>;
-
-export interface User {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-  isAdmin?: boolean;
-  adminRole?: "primary" | "secondary";
+// Admin Types
+export interface Admin {
+  id: string;
+  email: string;
+  role: "primary" | "secondary";
+  addedAt: Date;
 }
 
-export const discounts = pgTable("discounts", {
-  id: serial("id").primaryKey(),
-  sheepId: integer("sheep_id").notNull(),
-  percentage: decimal("percentage", { precision: 5, scale: 2 }).notNull(),
-  validFrom: timestamp("valid_from").notNull(),
-  validTo: timestamp("valid_to").notNull(),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertAdminSchema = z.object({
+  email: z.string().email("البريد الإلكتروني غير صالح"),
+  role: z.enum(["primary", "secondary"]).default("secondary"),
 });
 
-export type Discount = typeof discounts.$inferSelect;
-export const insertDiscountSchema = createInsertSchema(discounts, {
-  sheepId: z.number().min(1, "يجب اختيار منتج"),
-  percentage: z.string().refine((val) => {
-    const num = parseFloat(val);
-    return !isNaN(num) && num >= 1 && num <= 100;
-  }, "النسبة يجب أن تكون بين 1% و 100%"),
-  validFrom: z.string(),
-  validTo: z.string(),
-  isActive: z.boolean().default(true),
-}).omit({ id: true, createdAt: true });
-
-export type InsertDiscount = z.infer<typeof insertDiscountSchema>;
+export type InsertAdmin = z.infer<typeof insertAdminSchema>;

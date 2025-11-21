@@ -1,17 +1,17 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { getUserByEmail } from "./admin";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
-import { db } from "./db";
-import { admins, sheep, orders, images, insertSheepSchema, insertOrderSchema, insertImageSchema } from "@shared/schema";
-import { eq, inArray } from "drizzle-orm";
+import { getDb } from "./firestore";
+import { insertSheepSchema, insertOrderSchema, insertImageSchema, type Image, type Sheep, type Order } from "@shared/schema";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const db = getDb();
+
   app.get("/api/download-app", (req, res) => {
     try {
       const apkPath = path.join(__dirname, "..", "attached_assets", "app-release_1762910223541.apk");
@@ -31,6 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== Images Routes ====================
   app.post("/api/images", async (req, res) => {
     try {
       const { imageData, mimeType, originalFileName } = req.body;
@@ -54,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!apiKey) {
         return res.status(500).json({ message: 'مفتاح IMGBB_API_KEY غير موجود في متغيرات البيئة' });
       }
-      
+
       const formData = new URLSearchParams();
       formData.append('key', apiKey);
       formData.append('image', base64Data);
@@ -78,23 +79,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error('فشل في رفع الصورة إلى ImgBB');
       }
 
-      const result = await db.insert(images).values({
+      const imageDoc = await db.collection('images').add({
         imageUrl: imgbbData.data.url,
         thumbnailUrl: imgbbData.data.thumb?.url || imgbbData.data.url,
         deleteUrl: imgbbData.data.delete_url,
         originalFileName: originalFileName || imgbbData.data.title || null,
         mimeType,
         fileSize: imgbbData.data.size || null,
+        createdAt: new Date(),
       });
 
-      const insertId = result[0].insertId;
-
-      if (!insertId) {
-        throw new Error("فشل في الحصول على معرف الصورة");
-      }
-
       res.json({ 
-        id: insertId,
+        id: imageDoc.id,
         imageUrl: imgbbData.data.url,
         thumbnailUrl: imgbbData.data.thumb?.url || imgbbData.data.url,
       });
@@ -107,11 +103,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/images/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const [image] = await db.select().from(images).where(eq(images.id, parseInt(id))).limit(1);
+      const imageDoc = await db.collection('images').doc(id).get();
 
-      if (!image) {
+      if (!imageDoc.exists) {
         return res.status(404).json({ message: "الصورة غير موجودة" });
       }
+
+      const image = { id: imageDoc.id, ...imageDoc.data() } as Image;
 
       res.json({
         id: image.id,
@@ -128,332 +126,294 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== Admins Routes ====================
   app.get("/api/admins/check", async (req, res) => {
     try {
       const email = req.query.email as string;
       if (!email) {
-        return res.json(null);
+        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
       }
 
-      const [admin] = await db.select().from(admins).where(eq(admins.email, email)).limit(1);
+      const adminsSnapshot = await db.collection('admins')
+        .where('email', '==', email)
+        .limit(1)
+        .get();
 
-      if (!admin) {
-        return res.json(null);
+      if (adminsSnapshot.empty) {
+        return res.json({ isAdmin: false });
       }
 
-      res.json({ email: admin.email, role: admin.role });
+      const adminData = adminsSnapshot.docs[0].data();
+
+      res.json({
+        isAdmin: true,
+        role: (adminData as any).role || 'secondary',
+      });
     } catch (error: any) {
       console.error("Error checking admin:", error);
-      res.status(500).json({ message: error.message || "Internal server error" });
+      res.status(500).json({ message: error.message || "فشل في التحقق من الصلاحيات" });
     }
   });
 
   app.get("/api/admins", async (req, res) => {
     try {
-      const allAdmins = await db.select().from(admins);
-      res.json(allAdmins);
+      const adminsSnapshot = await db.collection('admins').get();
+      const admins = adminsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      res.json(admins);
     } catch (error: any) {
       console.error("Error fetching admins:", error);
-      res.status(500).json({ message: error.message || "Internal server error" });
+      res.status(500).json({ message: error.message || "فشل في جلب المشرفين" });
     }
   });
 
   app.post("/api/admins", async (req, res) => {
     try {
-      const { email } = req.body;
+      const { email, role } = req.body;
 
       if (!email) {
         return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
       }
 
-      if (email === "bouazzasalah120120@gmail.com") {
-        return res.status(400).json({ message: "هذا البريد محجوز للمدير الرئيسي" });
+      const existingSnapshot = await db.collection('admins')
+        .where('email', '==', email)
+        .limit(1)
+        .get();
+
+      if (!existingSnapshot.empty) {
+        return res.status(400).json({ message: "المشرف موجود مسبقاً" });
       }
 
-      const [existing] = await db.select().from(admins).where(eq(admins.email, email)).limit(1);
-      if (existing) {
-        return res.status(400).json({ message: "هذا المدير موجود بالفعل" });
-      }
-
-      const userResponse = await fetch(`${req.protocol}://${req.get('host')}/api/admin/user-by-email?email=${encodeURIComponent(email)}`);
-
-      if (!userResponse.ok) {
-        if (userResponse.status === 404) {
-          return res.status(404).json({ message: "المستخدم غير موجود. يجب على المستخدم التسجيل في الموقع أولاً" });
-        }
-        return res.status(500).json({ message: "فشل في الحصول على معلومات المستخدم" });
-      }
-
-      const result = await db.insert(admins).values({
+      const adminDoc = await db.collection('admins').add({
         email,
-        role: "secondary"
+        role: role || 'secondary',
+        addedAt: new Date(),
       });
 
-      res.json({ id: result[0].insertId, email, role: "secondary" });
+      const newAdmin = await db.collection('admins').doc(adminDoc.id).get();
+      res.json({ id: newAdmin.id, ...newAdmin.data() });
     } catch (error: any) {
       console.error("Error adding admin:", error);
-      res.status(500).json({ message: error.message || "Internal server error" });
+      res.status(500).json({ message: error.message || "فشل في إضافة المشرف" });
     }
   });
 
   app.delete("/api/admins/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const adminId = parseInt(id);
-
-      const [admin] = await db.select().from(admins).where(eq(admins.id, adminId)).limit(1);
-
-      if (!admin) {
-        return res.status(404).json({ message: "المدير غير موجود" });
-      }
-
-      if (admin.role === "primary") {
-        return res.status(400).json({ message: "لا يمكن حذف المدير الرئيسي" });
-      }
-
-      await db.delete(admins).where(eq(admins.id, adminId));
-      res.json({ message: "تم الحذف بنجاح" });
+      await db.collection('admins').doc(id).delete();
+      res.json({ message: "تم حذف المشرف بنجاح" });
     } catch (error: any) {
       console.error("Error deleting admin:", error);
-      res.status(500).json({ message: error.message || "Internal server error" });
+      res.status(500).json({ message: error.message || "فشل في حذف المشرف" });
     }
   });
 
-  app.get("/api/admin/user-by-email", async (req, res) => {
+  // ==================== Sheep Routes ====================
+  app.get("/api/sheep", async (req, res) => {
     try {
-      const email = req.query.email as string;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
-      const user = await getUserByEmail(email);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.json(user);
-    } catch (error: any) {
-      console.error("Error getting user by email:", error);
-      res.status(500).json({ message: error.message || "Internal server error" });
-    }
-  });
-
-  app.get("/api/sheep", async (_req, res) => {
-    try {
-      const allSheep = await db.select().from(sheep);
-
-      // For each sheep, convert image IDs to URLs
-      const sheepWithImages = await Promise.all(
-        allSheep.map(async (s) => {
-          let imageUrls: string[] = [];
-
-          if (s.imageIds) {
+      const sheepSnapshot = await db.collection('sheep').get();
+      const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc) => {
+        const sheepData = doc.data() as Sheep;
+        const imageUrls: string[] = [];
+        
+        if (sheepData.imageIds && sheepData.imageIds.length > 0) {
+          for (const imageId of sheepData.imageIds) {
             try {
-              // Parse the imageIds field (it could be JSON string or array)
-              const imageIds = typeof s.imageIds === 'string' 
-                ? JSON.parse(s.imageIds) 
-                : s.imageIds;
-
-              if (Array.isArray(imageIds) && imageIds.length > 0) {
-                // Check if first element is a number (ID) or URL
-                if (typeof imageIds[0] === 'number') {
-                  // Fetch image URLs from images table
-                  const imageRecords = await db
-                    .select()
-                    .from(images)
-                    .where(inArray(images.id, imageIds));
-
-                  imageUrls = imageRecords.map(img => img.imageUrl);
-                } else {
-                  // Already URLs
-                  imageUrls = imageIds;
-                }
+              const imageDoc = await db.collection('images').doc(imageId).get();
+              if (imageDoc.exists) {
+                const imageData = imageDoc.data() as Image;
+                imageUrls.push(imageData.imageUrl);
               }
-            } catch (e) {
-              console.error('Error parsing images for sheep:', s.id, e);
-              imageUrls = [];
+            } catch (err) {
+              console.error(`Error fetching image ${imageId}:`, err);
             }
           }
+        }
+        
+        return {
+          ...sheepData,
+          id: doc.id,
+          images: imageUrls,
+        };
+      }));
 
-          return {
-            ...s,
-            images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400']
-          };
-        })
-      );
-
-      res.json(sheepWithImages);
+      res.json(allSheep);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error("Error fetching sheep:", error);
+      res.status(500).json({ message: error.message || "فشل في جلب الأغنام" });
     }
   });
 
   app.get("/api/sheep/:id", async (req, res) => {
     try {
-      const result = await db
-        .select()
-        .from(sheep)
-        .where(eq(sheep.id, parseInt(req.params.id)))
-        .limit(1);
+      const { id } = req.params;
+      const sheepDoc = await db.collection('sheep').doc(id).get();
 
-      if (result.length === 0) {
-        return res.status(404).json({ error: "Sheep not found" });
+      if (!sheepDoc.exists) {
+        return res.status(404).json({ message: "الخروف غير موجود" });
       }
 
-      const s = result[0];
-      let imageUrls: string[] = [];
-
-      if (s.imageIds) {
-        try {
-          // Parse the imageIds field (it could be JSON string or array)
-          const imageIds = typeof s.imageIds === 'string' 
-            ? JSON.parse(s.imageIds) 
-            : s.imageIds;
-
-          if (Array.isArray(imageIds) && imageIds.length > 0) {
-            // Check if first element is a number (ID) or URL
-            if (typeof imageIds[0] === 'number') {
-              // Fetch image URLs from images table
-              const imageRecords = await db
-                .select()
-                .from(images)
-                .where(inArray(images.id, imageIds));
-
-              imageUrls = imageRecords.map(img => img.imageUrl);
-            } else {
-              // Already URLs
-              imageUrls = imageIds;
+      const sheepData = sheepDoc.data() as Sheep;
+      const imageUrls: string[] = [];
+      
+      if (sheepData.imageIds && sheepData.imageIds.length > 0) {
+        for (const imageId of sheepData.imageIds) {
+          try {
+            const imageDoc = await db.collection('images').doc(imageId).get();
+            if (imageDoc.exists) {
+              const imageData = imageDoc.data() as Image;
+              imageUrls.push(imageData.imageUrl);
             }
+          } catch (err) {
+            console.error(`Error fetching image ${imageId}:`, err);
           }
-        } catch (e) {
-          console.error('Error parsing images for sheep:', s.id, e);
-          imageUrls = [];
         }
       }
-
+      
       res.json({
-        ...s,
-        images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400']
+        ...sheepData,
+        id: sheepDoc.id,
+        images: imageUrls,
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error("Error fetching sheep:", error);
+      res.status(500).json({ message: error.message || "فشل في جلب الخروف" });
     }
   });
 
   app.post("/api/sheep", async (req, res) => {
     try {
-      const validated = insertSheepSchema.parse(req.body);
-
-      // Ensure imageIds is properly formatted as array with valid numbers
-      const validImageIds = Array.isArray(validated.imageIds) 
-        ? validated.imageIds.filter(id => typeof id === 'number' && id > 0)
-        : [];
-
-      const sheepData = {
-        ...validated,
-        imageIds: validImageIds
-      };
-
-      const result = await db.insert(sheep).values(sheepData);
-
-      const [newSheep] = await db.select().from(sheep).where(eq(sheep.id, result[0].insertId)).limit(1);
-
-      let imageUrls: string[] = [];
-      if (newSheep.imageIds && Array.isArray(newSheep.imageIds) && newSheep.imageIds.length > 0) {
-        const validIds = newSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
-
-        if (validIds.length > 0) {
-          const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
-          imageUrls = imageRecords.map(img => img.imageUrl);
-        }
+      const validation = insertSheepSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: validation.error.errors[0].message 
+        });
       }
 
-      const sheepWithImages = {
-        ...newSheep,
-        images: imageUrls,
-      };
+      const data = validation.data;
+      const sheepDoc = await db.collection('sheep').add({
+        ...data,
+        isFeatured: data.isFeatured || false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-      res.json(sheepWithImages);
+      const newSheep = await db.collection('sheep').doc(sheepDoc.id).get();
+      res.json({ id: newSheep.id, ...newSheep.data() });
     } catch (error: any) {
       console.error("Error creating sheep:", error);
-      res.status(500).json({ message: error.message || "فشل في إضافة المنتج" });
+      res.status(500).json({ message: error.message || "فشل في إضافة الخروف" });
     }
   });
 
   app.patch("/api/sheep/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const validated = insertSheepSchema.parse(req.body);
+      const sheepDoc = await db.collection('sheep').doc(id).get();
 
-      // Ensure imageIds is properly formatted
-      const updateData = {
-        ...validated,
-        imageIds: Array.isArray(validated.imageIds) 
-          ? validated.imageIds.filter(id => typeof id === 'number' && id > 0)
-          : []
-      };
-
-      await db.update(sheep).set(updateData).where(eq(sheep.id, parseInt(id)));
-
-      const [updatedSheep] = await db.select().from(sheep).where(eq(sheep.id, parseInt(id))).limit(1);
-
-      let imageUrls: string[] = [];
-      if (updatedSheep.imageIds && Array.isArray(updatedSheep.imageIds) && updatedSheep.imageIds.length > 0) {
-        const validIds = updatedSheep.imageIds.filter(id => typeof id === 'number' && id > 0);
-
-        if (validIds.length > 0) {
-          const imageRecords = await db.select().from(images).where(inArray(images.id, validIds));
-          imageUrls = imageRecords.map(img => img.imageUrl);
-        }
+      if (!sheepDoc.exists) {
+        return res.status(404).json({ message: "الخروف غير موجود" });
       }
 
-      const sheepWithImages = {
-        ...updatedSheep,
-        images: imageUrls,
-      };
+      const validation = insertSheepSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: validation.error.errors[0].message 
+        });
+      }
 
-      res.json(sheepWithImages);
+      const data = validation.data;
+      await db.collection('sheep').doc(id).update({
+        ...data,
+        updatedAt: new Date(),
+      });
+
+      const updatedSheep = await db.collection('sheep').doc(id).get();
+      res.json({ id: updatedSheep.id, ...updatedSheep.data() });
     } catch (error: any) {
       console.error("Error updating sheep:", error);
-      res.status(500).json({ message: error.message || "فشل في تحديث المنتج" });
+      res.status(500).json({ message: error.message || "فشل في تحديث الخروف" });
     }
   });
 
   app.delete("/api/sheep/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      await db.delete(sheep).where(eq(sheep.id, parseInt(id)));
-      res.json({ message: "تم الحذف بنجاح" });
+      await db.collection('sheep').doc(id).delete();
+      res.json({ message: "تم حذف الخروف بنجاح" });
     } catch (error: any) {
       console.error("Error deleting sheep:", error);
-      res.status(500).json({ message: error.message || "فشل في حذف المنتج" });
+      res.status(500).json({ message: error.message || "فشل في حذف الخروف" });
     }
   });
 
-  app.get("/api/orders", async (req, res) => {
+  // ==================== Orders Routes ====================
+  app.get("/api/orders", async (_req, res) => {
     try {
-      const allOrders = await db.select().from(orders);
-      res.json(allOrders);
+      const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+      const orders = ordersSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        };
+      });
+      res.json(orders);
     } catch (error: any) {
       console.error("Error fetching orders:", error);
-      res.status(500).json({ message: error.message || "Internal server error" });
+      res.status(500).json({ message: error.message || "فشل في جلب الطلبات" });
+    }
+  });
+
+  app.get("/api/orders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const orderDoc = await db.collection('orders').doc(id).get();
+
+      if (!orderDoc.exists) {
+        return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+
+      const order = { id: orderDoc.id, ...orderDoc.data() } as Order;
+      res.json(order);
+    } catch (error: any) {
+      console.error("Error fetching order:", error);
+      res.status(500).json({ message: error.message || "فشل في جلب الطلب" });
     }
   });
 
   app.post("/api/orders", async (req, res) => {
     try {
-      const validated = insertOrderSchema.parse(req.body);
-      const result = await db.insert(orders).values(validated);
+      const validation = insertOrderSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: validation.error.errors[0].message 
+        });
+      }
 
-      const [newOrder] = await db.select().from(orders).where(eq(orders.id, result[0].insertId)).limit(1);
-      res.json(newOrder);
+      const data = validation.data;
+      const orderDoc = await db.collection('orders').add({
+        ...data,
+        status: data.status || 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const newOrder = await db.collection('orders').doc(orderDoc.id).get();
+      res.json({ id: newOrder.id, ...newOrder.data() });
     } catch (error: any) {
       console.error("Error creating order:", error);
       res.status(500).json({ message: error.message || "فشل في إنشاء الطلب" });
     }
   });
 
-  app.patch("/api/orders/:id/status", async (req, res) => {
+  app.patch("/api/orders/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -462,16 +422,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "الحالة مطلوبة" });
       }
 
-      await db.update(orders).set({ status }).where(eq(orders.id, parseInt(id)));
+      const orderDoc = await db.collection('orders').doc(id).get();
+      if (!orderDoc.exists) {
+        return res.status(404).json({ message: "الطلب غير موجود" });
+      }
 
-      const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, parseInt(id))).limit(1);
-      res.json(updatedOrder);
+      await db.collection('orders').doc(id).update({
+        status,
+        updatedAt: new Date(),
+      });
+
+      const updatedOrder = await db.collection('orders').doc(id).get();
+      res.json({ id: updatedOrder.id, ...updatedOrder.data() });
     } catch (error: any) {
-      console.error("Error updating order status:", error);
-      res.status(500).json({ message: error.message || "فشل في تحديث حالة الطلب" });
+      console.error("Error updating order:", error);
+      res.status(500).json({ message: error.message || "فشل في تحديث الطلب" });
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  app.delete("/api/orders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.collection('orders').doc(id).delete();
+      res.json({ message: "تم حذف الطلب بنجاح" });
+    } catch (error: any) {
+      console.error("Error deleting order:", error);
+      res.status(500).json({ message: error.message || "فشل في حذف الطلب" });
+    }
+  });
+
+  return createServer(app);
 }

@@ -42,7 +42,7 @@ interface ProductFormDialogProps {
 
 export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDialogProps) {
   const { toast } = useToast();
-  const [imageData, setImageData] = useState<{ id: number; url: string }[]>([]);
+  const [imageData, setImageData] = useState<{ id: string; url: string }[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const form = useForm<InsertSheep>({
@@ -50,8 +50,8 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
     defaultValues: {
       name: "",
       category: "محلي",
-      price: "0",
-      discountPercentage: "0",
+      price: 0,
+      discountPercentage: 0,
       imageIds: [],
       age: "",
       weight: "",
@@ -67,8 +67,8 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
       form.reset({
         name: sheep.name,
         category: sheep.category as "محلي" | "روماني" | "إسباني",
-        price: String(sheep.price),
-        discountPercentage: sheep.discountPercentage ? String(sheep.discountPercentage) : "0",
+        price: sheep.price,
+        discountPercentage: sheep.discountPercentage || 0,
         imageIds: sheep.imageIds,
         age: sheep.age,
         weight: sheep.weight,
@@ -86,8 +86,8 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
       form.reset({
         name: "",
         category: "محلي",
-        price: "0",
-        discountPercentage: "0",
+        price: 0,
+        discountPercentage: 0,
         imageIds: [],
         age: "",
         weight: "",
@@ -275,7 +275,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
                         type="number"
                         placeholder="50000"
                         value={field.value}
-                        onChange={(e) => field.onChange(e.target.value)}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                         data-testid="input-price"
                       />
                     </FormControl>
@@ -295,7 +295,7 @@ export function ProductFormDialog({ open, onOpenChange, sheep }: ProductFormDial
                         type="number"
                         placeholder="0"
                         value={field.value}
-                        onChange={(e) => field.onChange(e.target.value)}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                         data-testid="input-discount"
                       />
                     </FormControl>
