@@ -18,6 +18,10 @@ export function initializeFirestore(): Firestore {
       }
 
       const serviceAccount = JSON.parse(serviceAccountKey);
+      
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
 
       adminApp = initializeApp({
         credential: cert(serviceAccount),
@@ -31,6 +35,10 @@ export function initializeFirestore(): Firestore {
     return db;
   } catch (error) {
     console.error('Failed to initialize Firestore:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      hasServiceAccountKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+    });
     throw error;
   }
 }
