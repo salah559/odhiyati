@@ -22,15 +22,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check for guest user in localStorage
   useEffect(() => {
-    const storedGuest = localStorage.getItem('guestUser');
-    if (storedGuest) {
-      try {
-        setGuestUser(JSON.parse(storedGuest));
-      } catch (e) {
-        console.error('Error parsing guest user:', e);
-        localStorage.removeItem('guestUser');
+    const loadGuestUser = () => {
+      const storedGuest = localStorage.getItem('guestUser');
+      if (storedGuest) {
+        try {
+          setGuestUser(JSON.parse(storedGuest));
+        } catch (e) {
+          console.error('Error parsing guest user:', e);
+          localStorage.removeItem('guestUser');
+        }
       }
-    }
+    };
+
+    loadGuestUser();
+
+    // Listen for storage events
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'guestUser') {
+        loadGuestUser();
+      }
+    };
+
+    // Listen for custom event for same-window updates
+    const handleGuestUpdate = () => {
+      loadGuestUser();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('guestUserUpdated', handleGuestUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('guestUserUpdated', handleGuestUpdate);
+    };
   }, []);
 
   // Listen to Firebase auth changes

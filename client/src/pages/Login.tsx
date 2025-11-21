@@ -89,8 +89,6 @@ export default function Login() {
         title: "تم تسجيل الدخول بنجاح",
         description: `أنت الآن تستخدم التطبيق كـ${roleText}`,
       });
-      
-      setLocation("/");
     } catch (error: any) {
       try {
         await signOut();
@@ -120,14 +118,13 @@ export default function Login() {
       localStorage.setItem('guestUser', JSON.stringify(profile));
       queryClient.setQueryData(['/api/users', guestId], profile);
       
+      // Notify AuthContext about the guest user update
+      window.dispatchEvent(new Event('guestUserUpdated'));
+      
       toast({
         title: "تم الدخول كزائر",
         description: "يمكنك تصفح المنتجات والطلب بدون حساب",
       });
-      
-      setTimeout(() => {
-        setLocation("/");
-      }, 100);
     } catch (error: any) {
       toast({
         title: "خطأ في الدخول كزائر",
