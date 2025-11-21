@@ -1,65 +1,43 @@
-
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { insertSheepSchema, insertOrderSchema, insertUserProfileSchema, type Image, type Sheep, type Order } from "../shared/schema";
 
 // تهيئة Firebase Admin
-let db: any;
-
-function getDb() {
-  if (!db) {
-    try {
-      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-      
-      if (!serviceAccountKey) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set');
-      }
-
-      let serviceAccount;
-      try {
-        serviceAccount = JSON.parse(serviceAccountKey);
-      } catch (parseError) {
-        throw new Error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Make sure it is valid JSON.');
-      }
-
-      if (getApps().length === 0) {
-        initializeApp({
-          credential: cert(serviceAccount),
-        });
-      }
-
-      db = getFirestore();
-    } catch (error) {
-      console.error('Failed to initialize Firestore:', error);
-      throw error;
+if (getApps().length === 0) {
+  try {
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!serviceAccountKey) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is missing');
     }
+    const serviceAccount = JSON.parse(serviceAccountKey);
+    initializeApp({
+      credential: cert(serviceAccount),
+    });
+  } catch (error) {
+    console.error('Firebase init error:', error);
   }
-  return db;
 }
 
+const db = getFirestore();
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // تعيين CORS headers
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   try {
-    const database = getDb();
-    const { method, url } = req;
-    const path = url?.split('?')[0] || '';
+    const path = req.url?.replace('/api', '') || '/';
+    const method = req.method || 'GET';
 
     // ==================== Images Routes ====================
-    if (path === '/api/images' && method === 'POST') {
+    if (path === '/images' && method === 'POST') {
       const { imageData, mimeType, originalFileName } = req.body;
 
       if (!imageData || !mimeType) {
@@ -105,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         throw new Error('فشل في رفع الصورة إلى ImgBB');
       }
 
-      const imageDoc = await database.collection('images').add({
+      const imageDoc = await db.collection('images').add({
         imageUrl: imgbbData.data.url,
         thumbnailUrl: imgbbData.data.thumb?.url || imgbbData.data.url,
         deleteUrl: imgbbData.data.delete_url,
@@ -122,9 +100,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    if (path.startsWith('/api/images/') && method === 'GET') {
-      const id = path.split('/')[3];
-      const imageDoc = await database.collection('images').doc(id).get();
+    if (path.startsWith('/images/') && method === 'GET') {
+      const id = path.split('/')[2];
+      const imageDoc = await db.collection('images').doc(id).get();
 
       if (!imageDoc.exists) {
         return res.status(404).json({ message: "الصورة غير موجودة" });
@@ -143,13 +121,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // ==================== Admins Routes ====================
-    if (path === '/api/admins/check' && method === 'GET') {
+    if (path === '/admins/check' && method === 'GET') {
       const email = req.query.email as string;
       if (!email) {
         return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
       }
 
-      const adminsSnapshot = await database.collection('admins')
+      const adminsSnapshot = await db.collection('admins')
         .where('email', '==', email)
         .limit(1)
         .get();
@@ -165,8 +143,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    if (path === '/api/admins' && method === 'GET') {
-      const adminsSnapshot = await database.collection('admins').get();
+    if (path === '/admins' && method === 'GET') {
+      const adminsSnapshot = await db.collection('admins').get();
       const admins = adminsSnapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data(),
@@ -174,14 +152,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json(admins);
     }
 
-    if (path === '/api/admins' && method === 'POST') {
+    if (path === '/admins' && method === 'POST') {
       const { email, role } = req.body;
 
       if (!email) {
         return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
       }
 
-      const existingSnapshot = await database.collection('admins')
+      const existingSnapshot = await db.collection('admins')
         .where('email', '==', email)
         .limit(1)
         .get();
@@ -190,26 +168,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ message: "المشرف موجود مسبقاً" });
       }
 
-      const adminDoc = await database.collection('admins').add({
+      const adminDoc = await db.collection('admins').add({
         email,
         role: role || 'secondary',
         addedAt: new Date(),
       });
 
-      const newAdmin = await database.collection('admins').doc(adminDoc.id).get();
+      const newAdmin = await db.collection('admins').doc(adminDoc.id).get();
       return res.json({ id: newAdmin.id, ...newAdmin.data() });
     }
 
-    if (path.startsWith('/api/admins/') && method === 'DELETE') {
-      const id = path.split('/')[3];
-      await database.collection('admins').doc(id).delete();
+    if (path.startsWith('/admins/') && method === 'DELETE') {
+      const id = path.split('/')[2];
+      await db.collection('admins').doc(id).delete();
       return res.json({ message: "تم حذف المشرف بنجاح" });
     }
 
     // ==================== Users Routes ====================
-    if (path.startsWith('/api/users/') && method === 'GET') {
-      const uid = path.split('/')[3];
-      const userDoc = await database.collection('users').doc(uid).get();
+    if (path.startsWith('/users/') && method === 'GET') {
+      const uid = path.split('/')[2];
+      const userDoc = await db.collection('users').doc(uid).get();
 
       if (!userDoc.exists) {
         return res.status(404).json({ message: "المستخدم غير موجود" });
@@ -219,9 +197,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ ...userData, uid: userDoc.id });
     }
 
-    if (path === '/api/users' && method === 'POST') {
+    if (path === '/users' && method === 'POST') {
       const validatedData = insertUserProfileSchema.parse(req.body);
-      const existingUser = await database.collection('users').doc(validatedData.uid).get();
+      const existingUser = await db.collection('users').doc(validatedData.uid).get();
       
       if (existingUser.exists) {
         return res.status(400).json({ message: "المستخدم موجود مسبقاً" });
@@ -229,7 +207,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       let finalUserType = validatedData.userType;
       if (validatedData.email) {
-        const adminsSnapshot = await database.collection('admins')
+        const adminsSnapshot = await db.collection('admins')
           .where('email', '==', validatedData.email)
           .get();
         
@@ -244,31 +222,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         createdAt: new Date(),
       };
 
-      await database.collection('users').doc(validatedData.uid).set(userData);
+      await db.collection('users').doc(validatedData.uid).set(userData);
       return res.json(userData);
     }
 
-    if (path.startsWith('/api/users/') && method === 'PATCH') {
-      const uid = path.split('/')[3];
+    if (path.startsWith('/users/') && method === 'PATCH') {
+      const uid = path.split('/')[2];
       const { userType } = req.body;
 
       if (!userType || !["buyer", "seller", "admin"].includes(userType)) {
         return res.status(400).json({ message: "نوع المستخدم غير صالح" });
       }
 
-      const userDoc = await database.collection('users').doc(uid).get();
+      const userDoc = await db.collection('users').doc(uid).get();
       if (!userDoc.exists) {
         return res.status(404).json({ message: "المستخدم غير موجود" });
       }
 
-      await database.collection('users').doc(uid).update({ userType });
-      const updatedUser = await database.collection('users').doc(uid).get();
+      await db.collection('users').doc(uid).update({ userType });
+      const updatedUser = await db.collection('users').doc(uid).get();
       return res.json({ ...updatedUser.data(), uid: updatedUser.id });
     }
 
     // ==================== Sheep Routes ====================
-    if (path === '/api/sheep' && method === 'GET') {
-      const sheepSnapshot = await database.collection('sheep').get();
+    if (path === '/sheep' && method === 'GET') {
+      const sheepSnapshot = await db.collection('sheep').get();
       const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc: any) => {
         const sheepData = doc.data() as Sheep;
         const imageUrls: string[] = [];
@@ -276,7 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (sheepData.imageIds && sheepData.imageIds.length > 0) {
           for (const imageId of sheepData.imageIds) {
             try {
-              const imageDoc = await database.collection('images').doc(imageId).get();
+              const imageDoc = await db.collection('images').doc(imageId).get();
               if (imageDoc.exists) {
                 const imageData = imageDoc.data() as Image;
                 imageUrls.push(imageData.imageUrl);
@@ -297,9 +275,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json(allSheep);
     }
 
-    if (path.startsWith('/api/sheep/') && method === 'GET') {
-      const id = path.split('/')[3];
-      const sheepDoc = await database.collection('sheep').doc(id).get();
+    if (path.startsWith('/sheep/') && method === 'GET') {
+      const id = path.split('/')[2];
+      const sheepDoc = await db.collection('sheep').doc(id).get();
 
       if (!sheepDoc.exists) {
         return res.status(404).json({ message: "الخروف غير موجود" });
@@ -311,7 +289,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (sheepData.imageIds && sheepData.imageIds.length > 0) {
         for (const imageId of sheepData.imageIds) {
           try {
-            const imageDoc = await database.collection('images').doc(imageId).get();
+            const imageDoc = await db.collection('images').doc(imageId).get();
             if (imageDoc.exists) {
               const imageData = imageDoc.data() as Image;
               imageUrls.push(imageData.imageUrl);
@@ -329,7 +307,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    if (path === '/api/sheep' && method === 'POST') {
+    if (path === '/sheep' && method === 'POST') {
       const validation = insertSheepSchema.safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({ 
@@ -338,20 +316,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const data = validation.data;
-      const sheepDoc = await database.collection('sheep').add({
+      const sheepDoc = await db.collection('sheep').add({
         ...data,
         isFeatured: data.isFeatured || false,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
-      const newSheep = await database.collection('sheep').doc(sheepDoc.id).get();
+      const newSheep = await db.collection('sheep').doc(sheepDoc.id).get();
       return res.json({ id: newSheep.id, ...newSheep.data() });
     }
 
-    if (path.startsWith('/api/sheep/') && method === 'PATCH') {
-      const id = path.split('/')[3];
-      const sheepDoc = await database.collection('sheep').doc(id).get();
+    if (path.startsWith('/sheep/') && method === 'PATCH') {
+      const id = path.split('/')[2];
+      const sheepDoc = await db.collection('sheep').doc(id).get();
 
       if (!sheepDoc.exists) {
         return res.status(404).json({ message: "الخروف غير موجود" });
@@ -365,24 +343,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const data = validation.data;
-      await database.collection('sheep').doc(id).update({
+      await db.collection('sheep').doc(id).update({
         ...data,
         updatedAt: new Date(),
       });
 
-      const updatedSheep = await database.collection('sheep').doc(id).get();
+      const updatedSheep = await db.collection('sheep').doc(id).get();
       return res.json({ id: updatedSheep.id, ...updatedSheep.data() });
     }
 
-    if (path.startsWith('/api/sheep/') && method === 'DELETE') {
-      const id = path.split('/')[3];
-      await database.collection('sheep').doc(id).delete();
+    if (path.startsWith('/sheep/') && method === 'DELETE') {
+      const id = path.split('/')[2];
+      await db.collection('sheep').doc(id).delete();
       return res.json({ message: "تم حذف الخروف بنجاح" });
     }
 
     // ==================== Orders Routes ====================
-    if (path === '/api/orders' && method === 'GET') {
-      const ordersSnapshot = await database.collection('orders').orderBy('createdAt', 'desc').get();
+    if (path === '/orders' && method === 'GET') {
+      const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
       const orders = ordersSnapshot.docs.map((doc: any) => {
         const data = doc.data();
         return {
@@ -395,9 +373,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json(orders);
     }
 
-    if (path.startsWith('/api/orders/') && method === 'GET') {
-      const id = path.split('/')[3];
-      const orderDoc = await database.collection('orders').doc(id).get();
+    if (path.startsWith('/orders/') && method === 'GET') {
+      const id = path.split('/')[2];
+      const orderDoc = await db.collection('orders').doc(id).get();
 
       if (!orderDoc.exists) {
         return res.status(404).json({ message: "الطلب غير موجود" });
@@ -407,7 +385,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json(order);
     }
 
-    if (path === '/api/orders' && method === 'POST') {
+    if (path === '/orders' && method === 'POST') {
       const validation = insertOrderSchema.safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({ 
@@ -416,42 +394,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const data = validation.data;
-      const orderDoc = await database.collection('orders').add({
+      const orderDoc = await db.collection('orders').add({
         ...data,
         status: data.status || 'pending',
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
-      const newOrder = await database.collection('orders').doc(orderDoc.id).get();
+      const newOrder = await db.collection('orders').doc(orderDoc.id).get();
       return res.json({ id: newOrder.id, ...newOrder.data() });
     }
 
-    if (path.startsWith('/api/orders/') && method === 'PATCH') {
-      const id = path.split('/')[3];
+    if (path.startsWith('/orders/') && method === 'PATCH') {
+      const id = path.split('/')[2];
       const { status } = req.body;
 
       if (!status) {
         return res.status(400).json({ message: "الحالة مطلوبة" });
       }
 
-      const orderDoc = await database.collection('orders').doc(id).get();
+      const orderDoc = await db.collection('orders').doc(id).get();
       if (!orderDoc.exists) {
         return res.status(404).json({ message: "الطلب غير موجود" });
       }
 
-      await database.collection('orders').doc(id).update({
+      await db.collection('orders').doc(id).update({
         status,
         updatedAt: new Date(),
       });
 
-      const updatedOrder = await database.collection('orders').doc(id).get();
+      const updatedOrder = await db.collection('orders').doc(id).get();
       return res.json({ id: updatedOrder.id, ...updatedOrder.data() });
     }
 
-    if (path.startsWith('/api/orders/') && method === 'DELETE') {
-      const id = path.split('/')[3];
-      await database.collection('orders').doc(id).delete();
+    if (path.startsWith('/orders/') && method === 'DELETE') {
+      const id = path.split('/')[2];
+      await db.collection('orders').doc(id).delete();
       return res.json({ message: "تم حذف الطلب بنجاح" });
     }
 
