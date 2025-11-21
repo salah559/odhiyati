@@ -9,6 +9,8 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isPrimaryAdmin: boolean;
+  isSeller: boolean;
+  isBuyer: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,6 +18,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   isPrimaryAdmin: false,
+  isSeller: false,
+  isBuyer: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -45,6 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchInterval: 5000,
   });
 
+  const { data: userProfileData } = useQuery<User | null>({
+    queryKey: ['/api/users', currentFirebaseUser?.uid],
+    enabled: !!currentFirebaseUser,
+    retry: false,
+  });
+
   useEffect(() => {
     if (!currentFirebaseUser) {
       return;
@@ -57,19 +67,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: currentFirebaseUser.email,
       displayName: currentFirebaseUser.displayName,
       photoURL: currentFirebaseUser.photoURL,
+      userType: userProfileData?.userType,
       isAdmin: isPrimary || !!adminData,
       adminRole: isPrimary ? "primary" : (adminData?.role as "secondary" | undefined),
     };
     
     setUser(appUser);
     setLoading(false);
-  }, [currentFirebaseUser, adminData]);
+  }, [currentFirebaseUser, adminData, userProfileData]);
 
   const value = {
     user,
     loading,
     isAdmin: user?.isAdmin || false,
     isPrimaryAdmin: user?.adminRole === "primary",
+    isSeller: user?.userType === "seller",
+    isBuyer: user?.userType === "buyer",
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
