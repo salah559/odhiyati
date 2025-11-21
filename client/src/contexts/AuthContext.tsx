@@ -11,6 +11,7 @@ interface AuthContextType {
   isPrimaryAdmin: boolean;
   isSeller: boolean;
   isBuyer: boolean;
+  isGuest: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   isPrimaryAdmin: false,
   isSeller: false,
   isBuyer: false,
+  isGuest: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -32,11 +34,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentFirebaseUser, setCurrentFirebaseUser] = useState<FirebaseUser | null>(null);
 
   useEffect(() => {
+    const guestUserData = localStorage.getItem('guestUser');
+    if (guestUserData) {
+      try {
+        const guestUser = JSON.parse(guestUserData);
+        setUser(guestUser);
+        setLoading(false);
+        return;
+      } catch (error) {
+        console.error('Failed to parse guest user data:', error);
+        localStorage.removeItem('guestUser');
+      }
+    }
+
     const unsubscribe = onAuthChange((firebaseUser: FirebaseUser | null) => {
       setCurrentFirebaseUser(firebaseUser);
       if (!firebaseUser) {
-        setUser(null);
-        setLoading(false);
+        const guestData = localStorage.getItem('guestUser');
+        if (!guestData) {
+          setUser(null);
+          setLoading(false);
+        }
+      } else {
+        localStorage.removeItem('guestUser');
       }
     });
 
@@ -128,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isPrimaryAdmin: user?.adminRole === "primary",
     isSeller: user?.userType === "seller",
     isBuyer: user?.userType === "buyer",
+    isGuest: user?.userType === "guest",
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

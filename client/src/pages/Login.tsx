@@ -127,6 +127,7 @@ export default function Login() {
         userType: "guest",
       });
 
+      localStorage.setItem('guestUser', JSON.stringify(profile));
       queryClient.setQueryData(['/api/users', guestId], profile);
       
       toast({
@@ -134,7 +135,9 @@ export default function Login() {
         description: "يمكنك تصفح المنتجات والطلب بدون حساب",
       });
       
-      setLocation("/");
+      setTimeout(() => {
+        setLocation("/");
+      }, 100);
     } catch (error: any) {
       toast({
         title: "خطأ في الدخول كزائر",
