@@ -111,6 +111,31 @@ export const insertOrderSchema = z.object({
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
+// User Types
+export const userTypes = ["buyer", "seller", "admin", "guest"] as const;
+export type UserType = typeof userTypes[number];
+
+export interface User {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  userType?: UserType;
+  isAdmin?: boolean;
+  adminRole?: "primary" | "secondary";
+  createdAt?: Date;
+}
+
+export const insertUserProfileSchema = z.object({
+  uid: z.string(),
+  email: z.string().email("البريد الإلكتروني غير صالح").nullable(),
+  displayName: z.string().nullable(),
+  photoURL: z.string().url().nullable().optional(),
+  userType: z.enum(userTypes),
+});
+
+export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+
 // Admin Types
 export interface Admin {
   id: string;

@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { getDb } from "./firestore";
-import { insertSheepSchema, insertOrderSchema, insertImageSchema, type Image, type Sheep, type Order } from "@shared/schema";
+import { insertSheepSchema, insertOrderSchema, insertImageSchema, insertUserProfileSchema, type Image, type Sheep, type Order, type User } from "@shared/schema";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -140,13 +140,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .get();
 
       if (adminsSnapshot.empty) {
-        return res.json({ isAdmin: false });
+        return res.status(404).json({ message: "المستخدم ليس مشرفاً" });
       }
 
       const adminData = adminsSnapshot.docs[0].data();
 
       res.json({
-        isAdmin: true,
+        email: email,
         role: (adminData as any).role || 'secondary',
       });
     } catch (error: any) {
@@ -209,6 +209,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting admin:", error);
       res.status(500).json({ message: error.message || "فشل في حذف المشرف" });
+    }
+  });
+
+  // ==================== Users Routes ====================
+  app.get("/api/users/:uid", async (req, res) => {
+    try {
+      const { uid } = req.params;
+      const userDoc = await db.collection('users').doc(uid).get();
+
+      if (!userDoc.exists) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+
+      const userData = userDoc.data() as User;
+      res.json({ ...userData, uid: userDoc.id });
+    } catch (error: any) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: error.message || "فشل في جلب بيانات المستخدم" });
+    }
+  });
+
+  app.post("/api/users", async (req, res) => {
+    try {
+      const validatedData = insertUserProfileSchema.parse(req.body);
+
+      const existingUser = await db.collection('users').doc(validatedData.uid).get();
+      
+      if (existingUser.exists) {
+        return res.status(400).json({ message: "المستخدم موجود مسبقاً" });
+      }
+
+      let finalUserType = validatedData.userType;
+      if (validatedData.email) {
+        const adminsSnapshot = await db.collection('admins')
+          .where('email', '==', validatedData.email)
+          .get();
+        
+        if (!adminsSnapshot.empty) {
+          finalUserType = 'admin';
+        }
+      }
+
+      const userData = {
+        ...validatedData,
+        userType: finalUserType,
+        createdAt: new Date(),
+      };
+
+      await db.collection('users').doc(validatedData.uid).set(userData);
+
+      res.json(userData);
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: error.message || "فشل في إنشاء المستخدم" });
+    }
+  });
+
+  app.patch("/api/users/:uid", async (req, res) => {
+    try {
+      const { uid } = req.params;
+      const { userType } = req.body;
+
+      if (!userType || !["buyer", "seller", "admin"].includes(userType)) {
+        return res.status(400).json({ message: "نوع المستخدم غير صالح" });
+      }
+
+      const userDoc = await db.collection('users').doc(uid).get();
+
+      if (!userDoc.exists) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+
+      await db.collection('users').doc(uid).update({
+        userType,
+      });
+
+      const updatedUser = await db.collection('users').doc(uid).get();
+      res.json({ ...updatedUser.data(), uid: updatedUser.id });
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: error.message || "فشل في تحديث المستخدم" });
     }
   });
 

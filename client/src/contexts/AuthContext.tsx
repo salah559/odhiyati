@@ -1,76 +1,75 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { User as FirebaseUser } from "firebase/auth";
-import { onAuthChange } from "@/lib/firebase";
-import type { User } from "@shared/schema";
-import { useQuery } from "@tanstack/react-query";
+
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { app } from '@/config/firebase.config';
+import { useQuery } from '@tanstack/react-query';
+import type { User, UserType } from '@shared/schema';
 
 interface AuthContextType {
   user: User | null;
+  firebaseUser: FirebaseUser | null;
   loading: boolean;
   isAdmin: boolean;
-  isPrimaryAdmin: boolean;
+  isGuest: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  isAdmin: false,
-  isPrimaryAdmin: false,
-});
-
-export const useAuth = () => useContext(AuthContext);
-
-const PRIMARY_ADMIN_EMAIL = "bouazzasalah120120@gmail.com";
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [currentFirebaseUser, setCurrentFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [guestUser, setGuestUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
+  // Check for guest user in localStorage
   useEffect(() => {
-    const unsubscribe = onAuthChange((firebaseUser: FirebaseUser | null) => {
-      setCurrentFirebaseUser(firebaseUser);
-      if (!firebaseUser) {
-        setUser(null);
-        setLoading(false);
+    const storedGuest = localStorage.getItem('guestUser');
+    if (storedGuest) {
+      try {
+        setGuestUser(JSON.parse(storedGuest));
+      } catch (e) {
+        console.error('Error parsing guest user:', e);
+        localStorage.removeItem('guestUser');
+      }
+    }
+  }, []);
+
+  // Listen to Firebase auth changes
+  useEffect(() => {
+    const auth = getAuth(app);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+      setAuthLoading(false);
+      if (!user) {
+        setGuestUser(null);
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  const { data: adminData } = useQuery<{ email: string; role: string } | null>({
-    queryKey: ['/api/admins/check', currentFirebaseUser?.email],
-    enabled: !!currentFirebaseUser && currentFirebaseUser.email !== PRIMARY_ADMIN_EMAIL,
-    refetchInterval: 5000,
+  // Fetch user profile from database if Firebase user exists
+  const { data: dbUser, isLoading: dbLoading } = useQuery<User>({
+    queryKey: ['/api/users', firebaseUser?.uid],
+    enabled: !!firebaseUser?.uid,
+    retry: 1,
   });
 
-  useEffect(() => {
-    if (!currentFirebaseUser) {
-      return;
-    }
+  const user = guestUser || dbUser || null;
+  const loading = authLoading || (!!firebaseUser && dbLoading);
+  const isAdmin = user?.userType === 'admin';
+  const isGuest = user?.userType === 'guest';
 
-    const isPrimary = currentFirebaseUser.email === PRIMARY_ADMIN_EMAIL;
-    
-    const appUser: User = {
-      uid: currentFirebaseUser.uid,
-      email: currentFirebaseUser.email,
-      displayName: currentFirebaseUser.displayName,
-      photoURL: currentFirebaseUser.photoURL,
-      isAdmin: isPrimary || !!adminData,
-      adminRole: isPrimary ? "primary" : (adminData?.role as "secondary" | undefined),
-    };
-    
-    setUser(appUser);
-    setLoading(false);
-  }, [currentFirebaseUser, adminData]);
+  return (
+    <AuthContext.Provider value={{ user, firebaseUser, loading, isAdmin, isGuest }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
 
-  const value = {
-    user,
-    loading,
-    isAdmin: user?.isAdmin || false,
-    isPrimaryAdmin: user?.adminRole === "primary",
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }
