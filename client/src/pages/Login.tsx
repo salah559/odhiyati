@@ -57,11 +57,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user && user.userType) {
-      if (user.userType === 'admin') {
-        setLocation("/admin");
-      } else {
-        setLocation("/");
-      }
+      setLocation("/");
     }
   }, [user, setLocation]);
 
@@ -94,13 +90,7 @@ export default function Login() {
         description: `أنت الآن تستخدم التطبيق كـ${roleText}`,
       });
       
-      if (profile.userType === "admin") {
-        setLocation("/admin");
-      } else if (profile.userType === "seller") {
-        setLocation("/products");
-      } else {
-        setLocation("/");
-      }
+      setLocation("/");
     } catch (error: any) {
       try {
         await signOut();
