@@ -115,6 +115,35 @@ export default function Login() {
     }
   };
 
+  const handleGuestLogin = async () => {
+    try {
+      const guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      const profile = await createOrUpdateProfile.mutateAsync({
+        uid: guestId,
+        email: null,
+        displayName: "زائر",
+        photoURL: null,
+        userType: "guest",
+      });
+
+      queryClient.setQueryData(['/api/users', guestId], profile);
+      
+      toast({
+        title: "تم الدخول كزائر",
+        description: "يمكنك تصفح المنتجات والطلب بدون حساب",
+      });
+      
+      setLocation("/");
+    } catch (error: any) {
+      toast({
+        title: "خطأ في الدخول كزائر",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-muted/30">
       <Card className="w-full max-w-md">
@@ -167,6 +196,25 @@ export default function Login() {
           >
             <SiGoogle className="h-5 w-5" />
             {createOrUpdateProfile.isPending ? "جاري تسجيل الدخول..." : "تسجيل الدخول بواسطة Google"}
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card px-2 text-muted-foreground">أو</span>
+            </div>
+          </div>
+
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={handleGuestLogin}
+            disabled={createOrUpdateProfile.isPending}
+            data-testid="button-guest-login"
+          >
+            {createOrUpdateProfile.isPending ? "جاري الدخول..." : "الدخول كزائر"}
           </Button>
         </CardContent>
       </Card>
