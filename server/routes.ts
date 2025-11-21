@@ -4,32 +4,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { getDb } from "./firestore";
-import { insertSheepSchema, insertOrderSchema, insertImageSchema, insertUserProfileSchema, type Image, type Sheep, type Order, type User } from "@shared/schema";
+import { insertSheepSchema, insertOrderSchema, insertImageSchema, type Image, type Sheep, type Order } from "@shared/schema";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize Firestore - lazy initialization per request in serverless
-  let db: any;
-  
-  const ensureDb = () => {
-    if (!db) {
-      db = getDb();
-    }
-    return db;
-  };
-  
-  // Middleware to ensure db is initialized for each request
-  app.use((req, res, next) => {
-    try {
-      ensureDb();
-      next();
-    } catch (error) {
-      console.error('Failed to initialize Firestore:', error);
-      res.status(500).json({ message: 'Database initialization failed' });
-    }
-  });
+  const db = getDb();
 
   app.get("/api/download-app", (req, res) => {
     try {
@@ -159,13 +140,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .get();
 
       if (adminsSnapshot.empty) {
-        return res.status(404).json({ message: "المستخدم ليس مشرفاً" });
+        return res.json({ isAdmin: false });
       }
 
       const adminData = adminsSnapshot.docs[0].data();
 
       res.json({
-        email: email,
+        isAdmin: true,
         role: (adminData as any).role || 'secondary',
       });
     } catch (error: any) {
@@ -177,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admins", async (req, res) => {
     try {
       const adminsSnapshot = await db.collection('admins').get();
-      const admins = adminsSnapshot.docs.map((doc: any) => ({
+      const admins = adminsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
@@ -231,92 +212,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ==================== Users Routes ====================
-  app.get("/api/users/:uid", async (req, res) => {
-    try {
-      const { uid } = req.params;
-      const userDoc = await db.collection('users').doc(uid).get();
-
-      if (!userDoc.exists) {
-        return res.status(404).json({ message: "المستخدم غير موجود" });
-      }
-
-      const userData = userDoc.data() as User;
-      res.json({ ...userData, uid: userDoc.id });
-    } catch (error: any) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: error.message || "فشل في جلب بيانات المستخدم" });
-    }
-  });
-
-  app.post("/api/users", async (req, res) => {
-    try {
-      const validatedData = insertUserProfileSchema.parse(req.body);
-
-      const existingUser = await db.collection('users').doc(validatedData.uid).get();
-      
-      if (existingUser.exists) {
-        return res.status(400).json({ message: "المستخدم موجود مسبقاً" });
-      }
-
-      let finalUserType = validatedData.userType;
-      if (validatedData.email) {
-        const adminsSnapshot = await db.collection('admins')
-          .where('email', '==', validatedData.email)
-          .get();
-        
-        if (!adminsSnapshot.empty) {
-          finalUserType = 'admin';
-        }
-      }
-
-      const userData = {
-        ...validatedData,
-        userType: finalUserType,
-        createdAt: new Date(),
-      };
-
-      await db.collection('users').doc(validatedData.uid).set(userData);
-
-      res.json(userData);
-    } catch (error: any) {
-      console.error("Error creating user:", error);
-      res.status(500).json({ message: error.message || "فشل في إنشاء المستخدم" });
-    }
-  });
-
-  app.patch("/api/users/:uid", async (req, res) => {
-    try {
-      const { uid } = req.params;
-      const { userType } = req.body;
-
-      if (!userType || !["buyer", "seller", "admin"].includes(userType)) {
-        return res.status(400).json({ message: "نوع المستخدم غير صالح" });
-      }
-
-      const userDoc = await db.collection('users').doc(uid).get();
-
-      if (!userDoc.exists) {
-        return res.status(404).json({ message: "المستخدم غير موجود" });
-      }
-
-      await db.collection('users').doc(uid).update({
-        userType,
-      });
-
-      const updatedUser = await db.collection('users').doc(uid).get();
-      res.json({ ...updatedUser.data(), uid: updatedUser.id });
-    } catch (error: any) {
-      console.error("Error updating user:", error);
-      res.status(500).json({ message: error.message || "فشل في تحديث المستخدم" });
-    }
-  });
-
   // ==================== Sheep Routes ====================
   app.get("/api/sheep", async (req, res) => {
     try {
       const sheepSnapshot = await db.collection('sheep').get();
-      const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc: any) => {
+      const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc) => {
         const sheepData = doc.data() as Sheep;
         const imageUrls: string[] = [];
         
@@ -455,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/orders", async (_req, res) => {
     try {
       const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
-      const orders = ordersSnapshot.docs.map((doc: any) => {
+      const orders = ordersSnapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,

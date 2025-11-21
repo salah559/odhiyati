@@ -1,16 +1,20 @@
 
-import { initializeApp } from 'firebase/app';
-
 // تكوين Firebase للواجهة الأمامية
 export const firebaseConfig = {
-  apiKey: "AIzaSyANVd7qWQcg5IBonIdQgbBZDAvXT049RkQ",
-  authDomain: "oudhiyaty.firebaseapp.com",
-  projectId: "oudhiyaty",
-  storageBucket: "oudhiyaty.firebasestorage.app",
-  messagingSenderId: "204852763681",
-  appId: "1:204852763681:web:ae3cfef9d44edf949ad760",
-  measurementId: "G-S56KC80F5Q"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "YOUR_API_KEY",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "YOUR_AUTH_DOMAIN",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "YOUR_PROJECT_ID",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "YOUR_STORAGE_BUCKET",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "YOUR_MESSAGING_SENDER_ID",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "YOUR_APP_ID",
 };
 
-// تهيئة Firebase
-export const app = initializeApp(firebaseConfig);
+// يمكنك تحديث القيم الافتراضية هنا مباشرة بدلاً من استخدام متغيرات البيئة
+// export const firebaseConfig = {
+//   apiKey: "AIza...",
+//   authDomain: "your-project.firebaseapp.com",
+//   projectId: "your-project-id",
+//   storageBucket: "your-project.appspot.com",
+//   messagingSenderId: "123456789",
+//   appId: "1:123456789:web:abc123",
+// };
