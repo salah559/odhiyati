@@ -10,6 +10,7 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   isAdmin: boolean;
+  isPrimaryAdmin: boolean;
   isGuest: boolean;
 }
 
@@ -57,10 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const user = guestUser || dbUser || null;
   const loading = authLoading || (!!firebaseUser && dbLoading);
   const isAdmin = user?.userType === 'admin';
+  const isPrimaryAdmin = isAdmin && user?.adminRole === 'primary';
   const isGuest = user?.userType === 'guest';
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading, isAdmin, isGuest }}>
+    <AuthContext.Provider value={{ user, firebaseUser, loading, isAdmin, isPrimaryAdmin, isGuest }}>
       {children}
     </AuthContext.Provider>
   );

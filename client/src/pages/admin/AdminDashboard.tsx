@@ -18,7 +18,7 @@ export default function AdminDashboard() {
     pendingOrders: orders.filter((o) => o.status === "pending").length,
     totalRevenue: orders
       .filter((o) => o.status === "completed")
-      .reduce((sum, o) => sum + o.totalAmount, 0),
+      .reduce((sum, o) => sum + parseFloat(o.totalAmount || '0'), 0),
   };
 
   return (
@@ -98,10 +98,10 @@ export default function AdminDashboard() {
                 >
                   <div className="min-w-0">
                     <p className="font-medium truncate">{order.userName}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{order.userEmail}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{order.userPhone}</p>
                   </div>
                   <div className="text-right sm:text-left flex-shrink-0">
-                    <p className="font-medium text-sm sm:text-base">{order.totalAmount.toLocaleString('ar-DZ')} دج</p>
+                    <p className="font-medium text-sm sm:text-base">{parseFloat(order.totalAmount || '0').toLocaleString('ar-DZ')} دج</p>
                     <p className="text-xs sm:text-sm text-muted-foreground">{order.status}</p>
                   </div>
                 </div>
