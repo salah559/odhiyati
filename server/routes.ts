@@ -177,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admins", async (req, res) => {
     try {
       const adminsSnapshot = await db.collection('admins').get();
-      const admins = adminsSnapshot.docs.map(doc => ({
+      const admins = adminsSnapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data(),
       }));
@@ -316,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sheep", async (req, res) => {
     try {
       const sheepSnapshot = await db.collection('sheep').get();
-      const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc) => {
+      const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc: any) => {
         const sheepData = doc.data() as Sheep;
         const imageUrls: string[] = [];
         
@@ -455,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/orders", async (_req, res) => {
     try {
       const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
-      const orders = ordersSnapshot.docs.map(doc => {
+      const orders = ordersSnapshot.docs.map((doc: any) => {
         const data = doc.data();
         return {
           id: doc.id,
