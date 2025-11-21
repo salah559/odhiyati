@@ -37,15 +37,12 @@ export default function Login() {
     try {
       const firebaseUser = await signInWithGoogle();
       
-      await apiRequest("/api/users", {
-        method: "POST",
-        body: JSON.stringify({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-          userType: selectedUserType,
-        }),
+      await apiRequest("/api/users", "POST", {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+        userType: selectedUserType,
       });
 
       await queryClient.invalidateQueries({ queryKey: ['/api/users'] });
@@ -54,7 +51,12 @@ export default function Login() {
         title: "تم تسجيل الدخول بنجاح",
         description: `مرحباً بك في أضحيتي كـ${selectedUserType === "buyer" ? "مشتري" : "بائع"}`,
       });
-      setLocation("/");
+      
+      if (selectedUserType === "seller") {
+        setLocation("/products");
+      } else {
+        setLocation("/");
+      }
     } catch (error: any) {
       if (error.message?.includes("موجود مسبقاً")) {
         toast({
