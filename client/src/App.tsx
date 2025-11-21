@@ -20,7 +20,7 @@ function Router() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">جاري التحميل...</p>
@@ -29,34 +29,23 @@ function Router() {
     );
   }
 
-  if (!user) {
-    return (
-      <Switch>
-        <Route path="/login" component={Login} />
-        <Route path="/:rest*">
-          {() => <Redirect to="/login" />}
-        </Route>
-      </Switch>
-    );
-  }
-
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Header />
-      <Switch>
-        <Route path="/login">
-          {() => <Redirect to="/" />}
-        </Route>
-        <Route path="/" component={Home} />
-        <Route path="/products" component={Products} />
-        <Route path="/products/:id" component={ProductDetail} />
-        <Route path="/download" component={DownloadApp} />
-        <Route path="/admin" component={AdminLayout} />
-        <Route path="/admin/:rest+" component={AdminLayout} />
-        <Route component={NotFound} />
-      </Switch>
+      <main className="flex-1">
+        <Switch>
+          <Route path="/login" component={Login} />
+          <Route path="/" component={Home} />
+          <Route path="/products" component={Products} />
+          <Route path="/products/:id" component={ProductDetail} />
+          <Route path="/download" component={DownloadApp} />
+          <Route path="/admin" component={AdminLayout} />
+          <Route path="/admin/:rest+" component={AdminLayout} />
+          <Route component={NotFound} />
+        </Switch>
+      </main>
       <Footer />
-    </>
+    </div>
   );
 }
 
