@@ -129,13 +129,7 @@ export default function AdminOrders() {
                       </p>
                     )}
                     <p className="text-muted-foreground">
-                      {order.createdAt && format(
-                        typeof order.createdAt === 'string' 
-                          ? new Date(order.createdAt) 
-                          : (order.createdAt as any).toDate(), 
-                        "PPP", 
-                        { locale: ar }
-                      )}
+                      {format(new Date(order.createdAt), "PPP", { locale: ar })}
                     </p>
                   </div>
                 </div>
