@@ -60,7 +60,7 @@ export default function Login() {
       if (user.userType === 'admin') {
         setLocation("/admin");
       } else {
-        setLocation("/home");
+        setLocation("/");
       }
     }
   }, [user, setLocation]);
@@ -99,7 +99,7 @@ export default function Login() {
       } else if (profile.userType === "seller") {
         setLocation("/products");
       } else {
-        setLocation("/home");
+        setLocation("/");
       }
     } catch (error: any) {
       try {
