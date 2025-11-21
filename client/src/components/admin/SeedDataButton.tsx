@@ -13,7 +13,7 @@ const sampleProducts: InsertSheep[] = [
     category: "محلي",
     price: 85000,
     discountPercentage: 10,
-    imageIds: [
+    images: [
       "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&h=800&fit=crop",
       "https://images.unsplash.com/photo-1563256905-dc104f8ece9b?w=800&h=800&fit=crop"
     ],
@@ -28,7 +28,7 @@ const sampleProducts: InsertSheep[] = [
     name: "خروف روماني مميز",
     category: "روماني",
     price: 95000,
-    imageIds: [
+    images: [
       "https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=800&h=800&fit=crop",
       "https://images.unsplash.com/photo-1584267761987-f7e5b32fe2cd?w=800&h=800&fit=crop"
     ],
@@ -44,7 +44,7 @@ const sampleProducts: InsertSheep[] = [
     category: "إسباني",
     price: 120000,
     discountPercentage: 15,
-    imageIds: [
+    images: [
       "https://images.unsplash.com/photo-1569935339919-76d63379f328?w=800&h=800&fit=crop",
       "https://images.unsplash.com/photo-1588595276888-d6ca3e3f94a8?w=800&h=800&fit=crop"
     ],
@@ -60,7 +60,7 @@ const sampleProducts: InsertSheep[] = [
     category: "محلي",
     price: 75000,
     discountPercentage: 20,
-    imageIds: [
+    images: [
       "https://images.unsplash.com/photo-1550419541-e0b6d33fc4b5?w=800&h=800&fit=crop",
       "https://images.unsplash.com/photo-1572788784834-0a6d8f062e9e?w=800&h=800&fit=crop"
     ],
@@ -75,7 +75,7 @@ const sampleProducts: InsertSheep[] = [
     name: "خروف روماني اقتصادي",
     category: "روماني",
     price: 85000,
-    imageIds: [
+    images: [
       "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&h=800&fit=crop"
     ],
     age: "سنة",
@@ -89,7 +89,7 @@ const sampleProducts: InsertSheep[] = [
     name: "خروف محلي فاخر - اختيار المربين",
     category: "محلي",
     price: 150000,
-    imageIds: [
+    images: [
       "https://images.unsplash.com/photo-1567416220050-68a8fdc9e1f4?w=800&h=800&fit=crop",
       "https://images.unsplash.com/photo-1581579438747-27d445775bf0?w=800&h=800&fit=crop",
       "https://images.unsplash.com/photo-1543637005-6ee5f9656280?w=800&h=800&fit=crop"

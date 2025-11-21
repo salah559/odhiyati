@@ -23,7 +23,7 @@ export function ProductCard({ sheep }: ProductCardProps) {
         <div className="relative aspect-square overflow-hidden bg-muted">
           {/* Image */}
           <img
-            src={sheep.images?.[0] || '/placeholder.png'}
+            src={sheep.images[0]}
             alt={sheep.name}
             className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
           />

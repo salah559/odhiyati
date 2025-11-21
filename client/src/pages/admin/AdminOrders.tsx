@@ -108,7 +108,7 @@ export default function AdminOrders() {
                     {order.items.map((item, index) => (
                       <div key={index} className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
                         <img
-                          src={item.sheepImageId}
+                          src={item.sheepImage}
                           alt={item.sheepName}
                           className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover flex-shrink-0"
                         />
@@ -129,13 +129,7 @@ export default function AdminOrders() {
                       </p>
                     )}
                     <p className="text-muted-foreground">
-                      {order.createdAt && format(
-                        typeof order.createdAt === 'string' 
-                          ? new Date(order.createdAt) 
-                          : (order.createdAt as any).toDate(), 
-                        "PPP", 
-                        { locale: ar }
-                      )}
+                      {format(new Date(order.createdAt), "PPP", { locale: ar })}
                     </p>
                   </div>
                 </div>
@@ -145,7 +139,7 @@ export default function AdminOrders() {
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground mb-1">المبلغ الإجمالي</p>
                     <p className="text-xl sm:text-2xl font-bold text-primary" data-testid={`text-total-${order.id}`}>
-                      {parseFloat(order.totalAmount || '0').toLocaleString('ar-DZ')} دج
+                      {order.totalAmount.toLocaleString('ar-DZ')} دج
                     </p>
                   </div>
 
