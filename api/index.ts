@@ -18,14 +18,26 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-(async () => {
-  await registerRoutes(app);
+// تهيئة المسارات
+let routesInitialized = false;
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
-  });
-})();
+async function initializeApp() {
+  if (!routesInitialized) {
+    await registerRoutes(app);
+    
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+    });
+    
+    routesInitialized = true;
+  }
+  return app;
+}
 
-export default app;
+// تصدير كدالة سحابية لـ Vercel
+export default async function handler(req: any, res: any) {
+  const app = await initializeApp();
+  return app(req, res);
+}
