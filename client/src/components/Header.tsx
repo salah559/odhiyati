@@ -53,7 +53,7 @@ export function Header() {
       <div className="container mx-auto max-w-7xl px-4">
         <div className="flex h-16 sm:h-20 md:h-24 items-center justify-between gap-2 sm:gap-4">
           {/* Logo - على اليمين */}
-          <Link href="/">
+          <Link href="/home">
             <div className="flex items-center gap-2 cursor-pointer" data-testid="link-home">
               <img
                 src={logoImage}
@@ -65,7 +65,7 @@ export function Header() {
 
           {/* Desktop Navigation - في الوسط */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/">
+            <Link href="/home">
               <Button variant="ghost" data-testid="link-home-nav">الرئيسية</Button>
             </Link>
             <Link href="/products">
@@ -106,7 +106,7 @@ export function Header() {
                 </DropdownMenu>
               </>
             ) : (
-              <Link href="/login">
+              <Link href="/">
                 <Button variant="default" data-testid="button-login">
                   تسجيل الدخول
                 </Button>
@@ -130,7 +130,7 @@ export function Header() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t py-4">
             <nav className="flex flex-col gap-2">
-              <Link href="/">
+              <Link href="/home">
                 <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="link-home-mobile">
                   الرئيسية
                 </Button>
