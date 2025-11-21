@@ -1,6 +1,7 @@
 
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { insertSheepSchema, insertOrderSchema, insertUserProfileSchema, type Image, type Sheep, type Order } from "../shared/schema";
 
 // تهيئة Firebase Admin
@@ -37,7 +38,7 @@ function getDb() {
   return db;
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // تعيين CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -55,7 +56,7 @@ export default async function handler(req: any, res: any) {
   try {
     const database = getDb();
     const { method, url } = req;
-    const path = url.split('?')[0];
+    const path = url?.split('?')[0] || '';
 
     // ==================== Images Routes ====================
     if (path === '/api/images' && method === 'POST') {
