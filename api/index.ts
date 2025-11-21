@@ -18,11 +18,11 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// تهيئة المسارات
-let routesInitialized = false;
+// تهيئة المسارات مرة واحدة
+let isInitialized = false;
 
-async function initializeApp() {
-  if (!routesInitialized) {
+async function initialize() {
+  if (!isInitialized) {
     await registerRoutes(app);
     
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -31,13 +31,12 @@ async function initializeApp() {
       res.status(status).json({ message });
     });
     
-    routesInitialized = true;
+    isInitialized = true;
   }
-  return app;
 }
 
-// تصدير كدالة سحابية لـ Vercel
+// تصدير الدالة السحابية
 export default async function handler(req: any, res: any) {
-  const app = await initializeApp();
+  await initialize();
   return app(req, res);
 }
