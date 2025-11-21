@@ -16,7 +16,7 @@ import DownloadApp from "@/pages/DownloadApp";
 import AdminLayout from "@/pages/admin/AdminLayout";
 
 function Router() {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -30,22 +30,103 @@ function Router() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1">
-        <Switch>
-          <Route path="/login" component={Login} />
-          <Route path="/" component={Home} />
-          <Route path="/products" component={Products} />
-          <Route path="/products/:id" component={ProductDetail} />
-          <Route path="/download" component={DownloadApp} />
-          <Route path="/admin" component={AdminLayout} />
-          <Route path="/admin/:rest+" component={AdminLayout} />
-          <Route component={NotFound} />
-        </Switch>
-      </main>
-      <Footer />
-    </div>
+    <Switch>
+      <Route path="/login" component={Login} />
+      <Route path="/">
+        {() => {
+          if (!user) {
+            return <Redirect to="/login" />;
+          }
+          return (
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <main className="flex-1">
+                <Home />
+              </main>
+              <Footer />
+            </div>
+          );
+        }}
+      </Route>
+      <Route path="/products">
+        {() => (
+          <ProtectedRoute>
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <main className="flex-1">
+                <Products />
+              </main>
+              <Footer />
+            </div>
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/products/:id">
+        {() => (
+          <ProtectedRoute>
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <main className="flex-1">
+                <ProductDetail />
+              </main>
+              <Footer />
+            </div>
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/download">
+        {() => (
+          <ProtectedRoute>
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <main className="flex-1">
+                <DownloadApp />
+              </main>
+              <Footer />
+            </div>
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/admin">
+        {() => (
+          <ProtectedRoute>
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <main className="flex-1">
+                <AdminLayout />
+              </main>
+              <Footer />
+            </div>
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/admin/:rest+">
+        {() => (
+          <ProtectedRoute>
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <main className="flex-1">
+                <AdminLayout />
+              </main>
+              <Footer />
+            </div>
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route>
+        {() => (
+          <ProtectedRoute>
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <main className="flex-1">
+                <NotFound />
+              </main>
+              <Footer />
+            </div>
+          </ProtectedRoute>
+        )}
+      </Route>
+    </Switch>
   );
 }
 
