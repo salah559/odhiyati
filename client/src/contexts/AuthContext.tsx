@@ -9,6 +9,8 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isPrimaryAdmin: boolean;
+  isSeller: boolean;
+  isBuyer: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,6 +18,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   isPrimaryAdmin: false,
+  isSeller: false,
+  isBuyer: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -39,10 +43,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const { data: adminData } = useQuery<{ email: string; role: string } | null>({
+  const { data: adminData, status: adminStatus } = useQuery<{ email: string; role: string } | null>({
     queryKey: ['/api/admins/check', currentFirebaseUser?.email],
     enabled: !!currentFirebaseUser && currentFirebaseUser.email !== PRIMARY_ADMIN_EMAIL,
-    refetchInterval: 5000,
+    retry: false,
+    refetchInterval: false,
+    queryFn: async ({ queryKey }) => {
+      const [, email] = queryKey;
+      if (!email) return null;
+      
+      const res = await fetch(`/api/admins/check?email=${encodeURIComponent(email as string)}`);
+      if (res.status === 404) {
+        return null;
+      }
+      if (!res.ok) {
+        throw new Error('Failed to check admin status');
+      }
+      return res.json();
+    },
+  });
+
+  const { data: userProfileData, status: profileStatus } = useQuery<User | null>({
+    queryKey: ['/api/users', currentFirebaseUser?.uid],
+    enabled: !!currentFirebaseUser,
+    retry: false,
+    refetchOnMount: true,
+    queryFn: async ({ queryKey }) => {
+      const [, uid] = queryKey;
+      const res = await fetch(`/api/users/${uid as string}`);
+      if (res.status === 404) {
+        return null;
+      }
+      if (!res.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+      return res.json();
+    },
   });
 
   useEffect(() => {
@@ -52,24 +88,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const isPrimary = currentFirebaseUser.email === PRIMARY_ADMIN_EMAIL;
     
+    if (!isPrimary && adminStatus !== 'success') {
+      return;
+    }
+    
+    const isAdmin = isPrimary || !!adminData;
+    
+    if (profileStatus !== 'success') {
+      return;
+    }
+    
+    if (!isAdmin && !userProfileData) {
+      return;
+    }
+    
+    let finalUserType = userProfileData?.userType;
+    if (isAdmin && !finalUserType) {
+      finalUserType = 'admin';
+    }
+    
     const appUser: User = {
       uid: currentFirebaseUser.uid,
       email: currentFirebaseUser.email,
       displayName: currentFirebaseUser.displayName,
       photoURL: currentFirebaseUser.photoURL,
-      isAdmin: isPrimary || !!adminData,
+      userType: finalUserType,
+      isAdmin,
       adminRole: isPrimary ? "primary" : (adminData?.role as "secondary" | undefined),
     };
     
     setUser(appUser);
     setLoading(false);
-  }, [currentFirebaseUser, adminData]);
+  }, [currentFirebaseUser, adminData, userProfileData, adminStatus, profileStatus]);
 
   const value = {
     user,
     loading,
     isAdmin: user?.isAdmin || false,
     isPrimaryAdmin: user?.adminRole === "primary",
+    isSeller: user?.userType === "seller",
+    isBuyer: user?.userType === "buyer",
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

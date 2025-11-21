@@ -55,7 +55,7 @@ export async function uploadMultipleImages(files: File[]): Promise<string[]> {
   }
 }
 
-export async function uploadImageToDatabase(file: File): Promise<{ id: number; imageUrl: string }> {
+export async function uploadImageToDatabase(file: File): Promise<{ id: string; imageUrl: string }> {
   try {
     // تحويل الملف إلى base64
     const base64 = await new Promise<string>((resolve, reject) => {
