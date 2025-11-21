@@ -3,23 +3,65 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { signInWithGoogle } from "@/lib/firebase";
+import { signInWithGoogle, signOut } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { SiGoogle } from "react-icons/si";
 import { ShoppingCart, Store } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { UserType } from "@shared/schema";
+import { useMutation } from "@tanstack/react-query";
+import type { UserType, User } from "@shared/schema";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedUserType, setSelectedUserType] = useState<UserType | null>(null);
+
+  const createOrUpdateProfile = useMutation({
+    mutationFn: async ({ uid, email, displayName, photoURL, userType }: {
+      uid: string;
+      email: string | null;
+      displayName: string | null;
+      photoURL: string | null;
+      userType: UserType;
+    }): Promise<User> => {
+      const createRes = await apiRequest("/api/users", "POST", {
+        uid,
+        email,
+        displayName,
+        photoURL,
+        userType,
+      });
+
+      if (!createRes.ok) {
+        if (createRes.status === 400) {
+          const updateRes = await apiRequest(`/api/users/${uid}`, "PATCH", { userType });
+          if (!updateRes.ok) {
+            const errorData = await updateRes.json();
+            throw new Error(errorData.message || "فشل في تحديث نوع الحساب");
+          }
+          return await updateRes.json();
+        } else {
+          const errorData = await createRes.json();
+          throw new Error(errorData.message || "فشل في إنشاء الحساب");
+        }
+      }
+      
+      return await createRes.json();
+    },
+    onSuccess: async (data) => {
+      queryClient.setQueryData(['/api/users', data.uid], data);
+      await queryClient.invalidateQueries({ queryKey: ['/api/users', data.uid] });
+    },
+  });
 
   useEffect(() => {
     if (user && user.userType) {
-      setLocation("/");
+      if (user.userType === 'admin') {
+        setLocation("/admin");
+      } else {
+        setLocation("/");
+      }
     }
   }, [user, setLocation]);
 
@@ -33,11 +75,10 @@ export default function Login() {
       return;
     }
 
-    setIsLoading(true);
     try {
       const firebaseUser = await signInWithGoogle();
       
-      await apiRequest("/api/users", "POST", {
+      const profile = await createOrUpdateProfile.mutateAsync({
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: firebaseUser.displayName,
@@ -45,34 +86,32 @@ export default function Login() {
         userType: selectedUserType,
       });
 
-      await queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-
+      const roleText = profile.userType === "buyer" ? "مشتري" : 
+                        profile.userType === "seller" ? "بائع" : "مشرف";
+      
       toast({
         title: "تم تسجيل الدخول بنجاح",
-        description: `مرحباً بك في أضحيتي كـ${selectedUserType === "buyer" ? "مشتري" : "بائع"}`,
+        description: `أنت الآن تستخدم التطبيق كـ${roleText}`,
       });
       
-      if (selectedUserType === "seller") {
+      if (profile.userType === "admin") {
+        setLocation("/admin");
+      } else if (profile.userType === "seller") {
         setLocation("/products");
       } else {
         setLocation("/");
       }
     } catch (error: any) {
-      if (error.message?.includes("موجود مسبقاً")) {
-        toast({
-          title: "تم تسجيل الدخول بنجاح",
-          description: "مرحباً بك مرة أخرى",
-        });
-        setLocation("/");
-      } else {
-        toast({
-          title: "خطأ في تسجيل الدخول",
-          description: error.message,
-          variant: "destructive",
-        });
+      try {
+        await signOut();
+      } catch (signOutError) {
+        console.error("Error signing out:", signOutError);
       }
-    } finally {
-      setIsLoading(false);
+      toast({
+        title: "خطأ في تسجيل الدخول",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -123,11 +162,11 @@ export default function Login() {
             variant="outline"
             className="w-full gap-2"
             onClick={handleGoogleSignIn}
-            disabled={isLoading || !selectedUserType}
+            disabled={createOrUpdateProfile.isPending || !selectedUserType}
             data-testid="button-google-signin"
           >
             <SiGoogle className="h-5 w-5" />
-            {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول بواسطة Google"}
+            {createOrUpdateProfile.isPending ? "جاري تسجيل الدخول..." : "تسجيل الدخول بواسطة Google"}
           </Button>
         </CardContent>
       </Card>

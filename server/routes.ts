@@ -140,13 +140,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .get();
 
       if (adminsSnapshot.empty) {
-        return res.json({ isAdmin: false });
+        return res.status(404).json({ message: "المستخدم ليس مشرفاً" });
       }
 
       const adminData = adminsSnapshot.docs[0].data();
 
       res.json({
-        isAdmin: true,
+        email: email,
         role: (adminData as any).role || 'secondary',
       });
     } catch (error: any) {
@@ -240,8 +240,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "المستخدم موجود مسبقاً" });
       }
 
+      let finalUserType = validatedData.userType;
+      if (validatedData.email) {
+        const adminsSnapshot = await db.collection('admins')
+          .where('email', '==', validatedData.email)
+          .get();
+        
+        if (!adminsSnapshot.empty) {
+          finalUserType = 'admin';
+        }
+      }
+
       const userData = {
         ...validatedData,
+        userType: finalUserType,
         createdAt: new Date(),
       };
 
@@ -259,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { uid } = req.params;
       const { userType } = req.body;
 
-      if (!userType || !["buyer", "seller"].includes(userType)) {
+      if (!userType || !["buyer", "seller", "admin"].includes(userType)) {
         return res.status(400).json({ message: "نوع المستخدم غير صالح" });
       }
 
