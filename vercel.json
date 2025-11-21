@@ -1,23 +1,39 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/public",
+  "rewrites": [
     {
-      "src": "dist/public/**/*",
-      "use": "@vercel/static"
+      "source": "/api/(.*)",
+      "destination": "/api/index"
     },
     {
-      "src": "dist/api/*.js",
-      "use": "@vercel/node"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/dist/api/$1.js"
-    },
+      "dest": "/api/index.js"
+    }
+  ],
+  "headers": [
     {
-      "src": "/(.*)",
-      "dest": "/dist/public/index.html"
+      "source": "/adhiati-app.apk",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=adhiati-app.apk"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }
