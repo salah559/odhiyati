@@ -16,7 +16,7 @@ import DownloadApp from "@/pages/DownloadApp";
 import AdminLayout from "@/pages/admin/AdminLayout";
 
 function Router() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
