@@ -5,11 +5,11 @@ import { ProductCard } from "@/components/ProductCard";
 import { CheckCircle, Clock, Shield, Award, Star, TrendingUp, Heart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Sheep } from "@shared/schema";
-import heroImage from "@assets/generated_images/Hero_sheep_pastoral_4351d2e5.png";
-import ramImage from "@assets/generated_images/Ram_category_image_2f96bd41.png";
-import eweImage from "@assets/generated_images/Ewe_category_image_5444fe06.png";
-import lambImage from "@assets/generated_images/Lamb_category_image_decc492a.png";
-import logoImage from "@assets/logo.jpg";
+
+const heroImage = "/images/sheep_pastoral_lands_0a9d5f89.jpg";
+const categoryImage1 = "/images/sheep_farm_animals_91c4b1c8.jpg";
+const categoryImage2 = "/images/sheep_farm_animals_421d2593.jpg";
+const categoryImage3 = "/images/sheep_farm_animals_855072c2.jpg";
 
 export default function Home() {
   const { data: sheep = [], isLoading } = useQuery<Sheep[]>({
@@ -23,11 +23,12 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative min-h-[500px] sm:min-h-[600px] md:min-h-[700px] flex items-center justify-center overflow-hidden">
-        {/* Background Image with Gradient Overlay */}
+        {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${heroImage})` }}
         />
+        {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-black/60 to-black/80" />
         
         {/* Islamic Pattern Overlay - Enhanced */}
@@ -98,9 +99,9 @@ export default function Home() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { name: "محلي", image: ramImage, category: "محلي" },
-              { name: "روماني", image: eweImage, category: "روماني" },
-              { name: "إسباني", image: lambImage, category: "إسباني" },
+              { name: "محلي", image: categoryImage1, category: "محلي" },
+              { name: "روماني", image: categoryImage2, category: "روماني" },
+              { name: "إسباني", image: categoryImage3, category: "إسباني" },
             ].map((cat) => (
               <Link key={cat.category} href={`/products?category=${cat.category}`}>
                 <div 

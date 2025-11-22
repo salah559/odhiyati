@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import logoImage from "@assets/logo.png";
 
 export function Header() {
   const { user, isAdmin, isGuest } = useAuth();
@@ -55,11 +54,7 @@ export function Header() {
           {/* Logo - على اليمين */}
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer" data-testid="link-home">
-              <img
-                src={logoImage}
-                alt="أضحيتي"
-                className="h-14 sm:h-16 md:h-20 w-auto"
-              />
+              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">أضحيتي</span>
             </div>
           </Link>
 
