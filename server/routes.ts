@@ -10,7 +10,26 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  const db = getDb();
+  // Initialize Firestore - lazy initialization per request in serverless
+  let db: any;
+  
+  const ensureDb = () => {
+    if (!db) {
+      db = getDb();
+    }
+    return db;
+  };
+  
+  // Middleware to ensure db is initialized for each request
+  app.use((req, res, next) => {
+    try {
+      ensureDb();
+      next();
+    } catch (error) {
+      console.error('Failed to initialize Firestore:', error);
+      res.status(500).json({ message: 'Database initialization failed' });
+    }
+  });
 
   app.get("/api/download-app", (req, res) => {
     try {
@@ -158,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admins", async (req, res) => {
     try {
       const adminsSnapshot = await db.collection('admins').get();
-      const admins = adminsSnapshot.docs.map(doc => ({
+      const admins = adminsSnapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data(),
       }));
@@ -297,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sheep", async (req, res) => {
     try {
       const sheepSnapshot = await db.collection('sheep').get();
-      const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc) => {
+      const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc: any) => {
         const sheepData = doc.data() as Sheep;
         const imageUrls: string[] = [];
         
@@ -436,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/orders", async (_req, res) => {
     try {
       const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
-      const orders = ordersSnapshot.docs.map(doc => {
+      const orders = ordersSnapshot.docs.map((doc: any) => {
         const data = doc.data();
         return {
           id: doc.id,

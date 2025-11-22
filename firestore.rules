@@ -1,165 +1,56 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // ==================== Helper Functions ====================
-    function isSignedIn() {
+    // Helper functions
+    function isAuthenticated() {
       return request.auth != null;
     }
-
+    
     function isPrimaryAdmin() {
-      return isSignedIn() && request.auth.token.email == 'bouazzasalah120120@gmail.com';
+      return isAuthenticated() && request.auth.token.email == 'bouazzasalah120120@gmail.com';
     }
-
-    function isSecondaryAdmin() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'secondary';
-    }
-
+    
     function isAdmin() {
-      return isPrimaryAdmin() || isSecondaryAdmin();
+      return isPrimaryAdmin() || 
+             (isAuthenticated() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
-
-    function getUserType() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
-    }
-
-    function isSeller() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             getUserType() == 'seller';
-    }
-
-    function isBuyer() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             getUserType() == 'buyer';
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // ==================== Users Collection ====================
-    match /users/{userId} {
-      // Any signed-in user can read user profiles
-      allow read: if isSignedIn();
-      
-      // Users can create own profile, admins can create any profile
-      allow create: if isSignedIn() && (
-        (isOwner(userId) && request.resource.data.userType in ['buyer', 'seller', 'admin']) ||
-        isAdmin()
-      );
-      
-      // Users can update own profile (except userType), admins can update any field
-      allow update: if isSignedIn() && (
-        (isOwner(userId) && request.resource.data.userType == resource.data.userType) ||
-        isAdmin()
-      );
-      
-      // Only admins can delete users
-      allow delete: if isAdmin();
-    }
-
-    // ==================== Admins Collection ====================
-    match /admins/{adminId} {
-      // Only admins can read other admins
-      allow read: if isAdmin();
-      
-      // Only primary admin can create secondary admins
-      allow create: if isPrimaryAdmin() && 
-                       request.resource.data.role == 'secondary';
-      
-      // Admins cannot be updated
-      allow update: if false;
-      
-      // Only primary admin can delete admins
-      allow delete: if isPrimaryAdmin();
-    }
-
-    // ==================== Sheep Collection ====================
-    match /sheep/{sheepId} {
-      // Anyone can read sheep (public listing)
-      allow read: if true;
-      
-      // Only sellers and admins can create sheep
-      allow create: if isSignedIn() && (isSeller() || isAdmin());
-      
-      // Sellers can update own sheep, admins can update any
-      allow update: if isSignedIn() && (
-        (isSeller() && resource.data.sellerId == request.auth.uid) ||
-        isAdmin()
-      );
-      
-      // Sellers can delete own sheep, admins can delete any
-      allow delete: if isSignedIn() && (
-        (isSeller() && resource.data.sellerId == request.auth.uid) ||
-        isAdmin()
-      );
-    }
-
-    // ==================== Images Collection ====================
+    
+    // Images collection - writable by admins, readable by all
     match /images/{imageId} {
-      // Anyone can read images
       allow read: if true;
-      
-      // Only authenticated users can upload images
-      allow create: if isSignedIn();
-      
-      // Users can delete own images, admins can delete any
-      allow delete: if isSignedIn() && (
-        isOwner(resource.data.uploadedBy) ||
-        isAdmin()
-      );
-      
-      // No updates allowed on images
-      allow update: if false;
+      allow create, delete: if isAdmin();
+      allow update: if false; // Images cannot be updated
     }
-
-    // ==================== Orders Collection ====================
+    
+    // Sheep collection - readable by all, writable by admins only
+    match /sheep/{sheepId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Orders collection - create by authenticated users, read/update by admins
     match /orders/{orderId} {
-      // Buyers can read own orders, admins can read all
-      allow read: if isSignedIn() && (
-        (isBuyer() && resource.data.userId == request.auth.uid) ||
-        isAdmin()
-      );
-      
-      // Buyers can create orders
-      allow create: if isSignedIn() && isBuyer();
-      
-      // Only admins can update order status
-      allow update: if isSignedIn() && isAdmin();
-      
-      // Orders should never be deleted
-      allow delete: if false;
+      allow create: if isAuthenticated();
+      allow read, update: if isAdmin();
+      allow delete: if false; // Never allow order deletion
     }
-
-    // ==================== Reviews Collection (Optional) ====================
-    match /reviews/{reviewId} {
-      // Anyone can read reviews
-      allow read: if true;
-      
-      // Signed-in users can create reviews
-      allow create: if isSignedIn();
-      
-      // Users can update own reviews, admins can update any
-      allow update: if isSignedIn() && (
-        isOwner(resource.data.userId) ||
-        isAdmin()
-      );
-      
-      // Users can delete own reviews, admins can delete any
-      allow delete: if isSignedIn() && (
-        isOwner(resource.data.userId) ||
-        isAdmin()
-      );
+    
+    // Users collection - users can read/write their own data, admins can read all
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow delete: if false; // Never allow user deletion
     }
-
-    // ==================== Default Deny ====================
-    match /{document=**} {
-      allow read, write: if false;
+    
+    // Admins collection - only primary admin can manage
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow create, delete: if isPrimaryAdmin();
+      allow update: if false; // Admins cannot be updated, only created or deleted
     }
   }
 }

@@ -112,7 +112,7 @@ export const insertOrderSchema = z.object({
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 // User Types
-export const userTypes = ["buyer", "seller", "admin"] as const;
+export const userTypes = ["buyer", "seller", "admin", "guest"] as const;
 export type UserType = typeof userTypes[number];
 
 export interface User {

@@ -1,8 +1,8 @@
 import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
-let adminApp: App | null = null;
-let db: Firestore | null = null;
+let adminApp: App;
+let db: Firestore;
 
 export function initializeFirestore(): Firestore {
   if (db) {
@@ -10,19 +10,17 @@ export function initializeFirestore(): Firestore {
   }
 
   try {
-    // تحقق من المتغيرات المطلوبة
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    
-    if (!serviceAccountKey) {
-      throw new Error('❌ FIREBASE_SERVICE_ACCOUNT_KEY بيئي متغير مفقود. تأكد من إضافته إلى Vercel Environment Variables');
-    }
-
     if (!getApps().length) {
-      let serviceAccount;
-      try {
-        serviceAccount = JSON.parse(serviceAccountKey);
-      } catch (parseError) {
-        throw new Error(`خطأ في تحليل FIREBASE_SERVICE_ACCOUNT_KEY JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      
+      if (!serviceAccountKey) {
+        throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is required');
+      }
+
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
       }
 
       adminApp = initializeApp({
@@ -33,11 +31,14 @@ export function initializeFirestore(): Firestore {
     }
 
     db = getFirestore(adminApp);
-    console.log('✅ تم تهيئة Firestore بنجاح');
     
     return db;
   } catch (error) {
-    console.error('❌ فشل في تهيئة Firestore:', error);
+    console.error('Failed to initialize Firestore:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      hasServiceAccountKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+    });
     throw error;
   }
 }

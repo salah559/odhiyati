@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, User, LogOut, ShieldCheck, Menu, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,20 +11,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import logoImage from "@assets/logo.png";
 
 export function Header() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isGuest } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
-      await signOut();
-      toast({
-        title: "تم تسجيل الخروج بنجاح",
-        description: "نراك قريباً",
-      });
+      if (isGuest) {
+        localStorage.removeItem('guestUser');
+        queryClient.clear();
+        toast({
+          title: "تم تسجيل الخروج بنجاح",
+          description: "نراك قريباً",
+        });
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+      } else {
+        await signOut();
+        toast({
+          title: "تم تسجيل الخروج بنجاح",
+          description: "نراك قريباً",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "خطأ",

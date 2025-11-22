@@ -25,35 +25,29 @@ export default function Login() {
       photoURL: string | null;
       userType: UserType;
     }): Promise<User> => {
-      try {
-        // أولاً، تحقق إذا كان المستخدم موجود بالفعل
-        const checkRes = await fetch(`/api/users/${uid}`, {
-          credentials: "include",
-        });
-        
-        if (checkRes.ok) {
-          // المستخدم موجود، أرجع بيانات المستخدم الموجود
-          return await checkRes.json();
-        }
-        
-        if (checkRes.status === 404) {
-          // المستخدم جديد، أنشئ profile جديد
-          const createRes = await apiRequest("/api/users", "POST", {
-            uid,
-            email,
-            displayName,
-            photoURL,
-            userType,
-          });
-          return await createRes.json();
-        }
-        
-        // لأي status آخر، رمي الخطأ
-        const errorText = await checkRes.text();
-        throw new Error(errorText || `فشل في التحقق من المستخدم (${checkRes.status})`);
-      } catch (error: any) {
-        throw new Error(error.message || "فشل في التحقق من المستخدم");
+      // محاولة جلب المستخدم أولاً
+      const getUserRes = await apiRequest(`/api/users/${uid}`, "GET");
+      
+      if (getUserRes.ok) {
+        // المستخدم موجود، نرجع بياناته
+        return await getUserRes.json();
       }
+      
+      // المستخدم غير موجود، ننشئ حساب جديد
+      const createRes = await apiRequest("/api/users", "POST", {
+        uid,
+        email,
+        displayName,
+        photoURL,
+        userType,
+      });
+
+      if (!createRes.ok) {
+        const errorData = await createRes.json();
+        throw new Error(errorData.message || "فشل في إنشاء الحساب");
+      }
+      
+      return await createRes.json();
     },
     onSuccess: async (data) => {
       queryClient.setQueryData(['/api/users', data.uid], data);
@@ -63,11 +57,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user && user.userType) {
-      if (user.userType === 'admin') {
-        setLocation("/admin");
-      } else {
-        setLocation("/");
-      }
+      setLocation("/");
     }
   }, [user, setLocation]);
 
@@ -96,17 +86,9 @@ export default function Login() {
                         profile.userType === "seller" ? "بائع" : "مشرف";
       
       toast({
-        title: "تم تسجيل الدخول بنجاح",
+        title: "مرحباً بك",
         description: `أنت الآن تستخدم التطبيق كـ${roleText}`,
       });
-      
-      if (profile.userType === "admin") {
-        setLocation("/admin");
-      } else if (profile.userType === "seller") {
-        setLocation("/products");
-      } else {
-        setLocation("/");
-      }
     } catch (error: any) {
       try {
         await signOut();
@@ -115,6 +97,37 @@ export default function Login() {
       }
       toast({
         title: "خطأ في تسجيل الدخول",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    try {
+      const guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      const profile = await createOrUpdateProfile.mutateAsync({
+        uid: guestId,
+        email: null,
+        displayName: "زائر",
+        photoURL: null,
+        userType: "guest",
+      });
+
+      localStorage.setItem('guestUser', JSON.stringify(profile));
+      queryClient.setQueryData(['/api/users', guestId], profile);
+      
+      // Notify AuthContext about the guest user update
+      window.dispatchEvent(new Event('guestUserUpdated'));
+      
+      toast({
+        title: "تم الدخول كزائر",
+        description: "يمكنك تصفح المنتجات والطلب بدون حساب",
+      });
+    } catch (error: any) {
+      toast({
+        title: "خطأ في الدخول كزائر",
         description: error.message,
         variant: "destructive",
       });
@@ -173,6 +186,25 @@ export default function Login() {
           >
             <SiGoogle className="h-5 w-5" />
             {createOrUpdateProfile.isPending ? "جاري تسجيل الدخول..." : "تسجيل الدخول بواسطة Google"}
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card px-2 text-muted-foreground">أو</span>
+            </div>
+          </div>
+
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={handleGuestLogin}
+            disabled={createOrUpdateProfile.isPending}
+            data-testid="button-guest-login"
+          >
+            {createOrUpdateProfile.isPending ? "جاري الدخول..." : "الدخول كزائر"}
           </Button>
         </CardContent>
       </Card>
