@@ -25,33 +25,35 @@ export default function Login() {
       photoURL: string | null;
       userType: UserType;
     }): Promise<User> => {
-      // أولاً، تحقق إذا كان المستخدم موجود بالفعل
-      const checkRes = await fetch(`/api/users/${uid}`);
-      
-      if (checkRes.ok) {
-        // المستخدم موجود، أرجع بيانات المستخدم الموجود
-        return await checkRes.json();
+      try {
+        // أولاً، تحقق إذا كان المستخدم موجود بالفعل
+        const checkRes = await fetch(`/api/users/${uid}`, {
+          credentials: "include",
+        });
+        
+        if (checkRes.ok) {
+          // المستخدم موجود، أرجع بيانات المستخدم الموجود
+          return await checkRes.json();
+        }
+        
+        if (checkRes.status === 404) {
+          // المستخدم جديد، أنشئ profile جديد
+          const createRes = await apiRequest("/api/users", "POST", {
+            uid,
+            email,
+            displayName,
+            photoURL,
+            userType,
+          });
+          return await createRes.json();
+        }
+        
+        // لأي status آخر، رمي الخطأ
+        const errorText = await checkRes.text();
+        throw new Error(errorText || `فشل في التحقق من المستخدم (${checkRes.status})`);
+      } catch (error: any) {
+        throw new Error(error.message || "فشل في التحقق من المستخدم");
       }
-      
-      if (checkRes.status !== 404) {
-        throw new Error("فشل في التحقق من المستخدم");
-      }
-
-      // المستخدم جديد، أنشئ profile جديد
-      const createRes = await apiRequest("/api/users", "POST", {
-        uid,
-        email,
-        displayName,
-        photoURL,
-        userType,
-      });
-
-      if (!createRes.ok) {
-        const errorData = await createRes.json();
-        throw new Error(errorData.message || "فشل في إنشاء الحساب");
-      }
-      
-      return await createRes.json();
     },
     onSuccess: async (data) => {
       queryClient.setQueryData(['/api/users', data.uid], data);
