@@ -75,7 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: dbUser, isLoading: dbLoading } = useQuery<User>({
     queryKey: ['/api/users', firebaseUser?.uid],
     enabled: !!firebaseUser?.uid,
-    retry: 1,
+    retry: false,
+    // Don't show error toast for 404s - user might not exist yet
+    meta: {
+      ignoreErrors: true,
+    },
   });
 
   const user = guestUser || dbUser || null;

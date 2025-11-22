@@ -161,13 +161,21 @@ export default function Login() {
     try {
       const guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       
-      const profile = await createOrUpdateProfile.mutateAsync({
+      // Create guest user directly without checking if exists
+      const createRes = await apiRequest("/api/users", "POST", {
         uid: guestId,
         email: null,
         displayName: "زائر",
         photoURL: null,
         userType: "guest",
       });
+
+      if (!createRes.ok) {
+        const errorData = await createRes.json().catch(() => ({ message: "خطأ غير معروف" }));
+        throw new Error(errorData.message || "فشل في إنشاء حساب الزائر");
+      }
+
+      const profile = await createRes.json();
 
       localStorage.setItem('guestUser', JSON.stringify(profile));
       queryClient.setQueryData(['/api/users', guestId], profile);
@@ -180,6 +188,7 @@ export default function Login() {
         description: "يمكنك تصفح المنتجات والطلب بدون حساب",
       });
     } catch (error: any) {
+      console.error("Error in guest login:", error);
       toast({
         title: "خطأ في الدخول كزائر",
         description: error.message,
