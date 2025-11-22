@@ -36,21 +36,26 @@ export default function Login() {
         return await getUserRes.json();
       }
       
-      // المستخدم غير موجود، ننشئ حساب جديد
-      const createRes = await apiRequest("/api/users", "POST", {
-        uid,
-        email,
-        displayName,
-        photoURL,
-        userType,
-      });
+      // المستخدم غير موجود (404 أو أي خطأ آخر)، ننشئ حساب جديد
+      try {
+        const createRes = await apiRequest("/api/users", "POST", {
+          uid,
+          email,
+          displayName,
+          photoURL,
+          userType,
+        });
 
-      if (!createRes.ok) {
-        const errorData = await createRes.json();
-        throw new Error(errorData.message || "فشل في إنشاء الحساب");
+        if (!createRes.ok) {
+          const errorData = await createRes.json().catch(() => ({ message: "خطأ غير معروف" }));
+          throw new Error(errorData.message || "فشل في إنشاء الحساب");
+        }
+        
+        return await createRes.json();
+      } catch (error: any) {
+        console.error("Error in createOrUpdateProfile:", error);
+        throw error;
       }
-      
-      return await createRes.json();
     },
     onSuccess: async (data) => {
       queryClient.setQueryData(['/api/users', data.uid], data);

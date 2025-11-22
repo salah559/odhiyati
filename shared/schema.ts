@@ -128,9 +128,9 @@ export interface User {
 
 export const insertUserProfileSchema = z.object({
   uid: z.string(),
-  email: z.string().email("البريد الإلكتروني غير صالح").nullable(),
+  email: z.string().email("البريد الإلكتروني غير صالح").nullable().or(z.null()),
   displayName: z.string().nullable(),
-  photoURL: z.string().url().nullable().optional(),
+  photoURL: z.string().nullable().optional(),
   userType: z.enum(userTypes),
 });
 
