@@ -18,14 +18,33 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-(async () => {
-  await registerRoutes(app);
+let routesRegistered = false;
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
-  });
-})();
+const registerRoutesOnce = async () => {
+  if (!routesRegistered) {
+    try {
+      await registerRoutes(app);
+      routesRegistered = true;
+    } catch (error) {
+      console.error('Failed to register routes:', error);
+      throw error;
+    }
+  }
+};
+
+app.use((req, res, next) => {
+  if (!routesRegistered) {
+    registerRoutesOnce().then(() => next()).catch(next);
+  } else {
+    next();
+  }
+});
+
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('API Error:', err);
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  res.status(status).json({ message });
+});
 
 export default app;
