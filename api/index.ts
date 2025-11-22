@@ -1,4 +1,3 @@
-
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "../server/routes";
 
@@ -18,28 +17,13 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-let routesRegistered = false;
-
-const registerRoutesOnce = async () => {
-  if (!routesRegistered) {
-    try {
-      await registerRoutes(app);
-      routesRegistered = true;
-    } catch (error) {
-      console.error('Failed to register routes:', error);
-      throw error;
-    }
-  }
-};
-
-app.use((req, res, next) => {
-  if (!routesRegistered) {
-    registerRoutesOnce().then(() => next()).catch(next);
-  } else {
-    next();
-  }
+// Initialize routes immediately
+registerRoutes(app).catch((err) => {
+  console.error('Failed to register routes:', err);
+  process.exit(1);
 });
 
+// Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error('API Error:', err);
   const status = err.status || err.statusCode || 500;
