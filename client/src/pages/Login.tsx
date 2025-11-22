@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { signInWithGoogle, signOut } from "@/lib/firebase";
+import { signInWithGoogle, signOut, signInWithEmail } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { SiGoogle } from "react-icons/si";
-import { ShoppingCart, Store } from "lucide-react";
+import { ShoppingCart, Store, Mail } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import type { UserType, User } from "@shared/schema";
@@ -16,6 +18,7 @@ export default function Login() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedUserType, setSelectedUserType] = useState<UserType | null>(null);
+  const [email, setEmail] = useState("");
 
   const createOrUpdateProfile = useMutation({
     mutationFn: async ({ uid, email, displayName, photoURL, userType }: {
@@ -103,6 +106,52 @@ export default function Login() {
     }
   };
 
+  const handleEmailSignIn = async () => {
+    if (!email || !email.includes('@')) {
+      toast({
+        title: "بريد إلكتروني غير صالح",
+        description: "الرجاء إدخال بريد إلكتروني صحيح",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedUserType) {
+      toast({
+        title: "يرجى الاختيار",
+        description: "الرجاء اختيار نوع الحساب قبل المتابعة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const firebaseUser = await signInWithEmail(email);
+      
+      const profile = await createOrUpdateProfile.mutateAsync({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName || email.split('@')[0],
+        photoURL: firebaseUser.photoURL,
+        userType: selectedUserType,
+      });
+
+      const roleText = profile.userType === "buyer" ? "مشتري" : 
+                        profile.userType === "seller" ? "بائع" : "مشرف";
+      
+      toast({
+        title: "مرحباً بك",
+        description: `أنت الآن تستخدم التطبيق كـ${roleText}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "خطأ في تسجيل الدخول",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleGuestLogin = async () => {
     try {
       const guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -174,6 +223,42 @@ export default function Login() {
             </div>
             <div className="relative flex justify-center text-xs">
               <span className="bg-card px-2 text-muted-foreground">ثم</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium">
+              البريد الإلكتروني
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="example@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="text-right"
+              dir="ltr"
+              disabled={createOrUpdateProfile.isPending}
+            />
+          </div>
+
+          <Button
+            variant="default"
+            className="w-full gap-2"
+            onClick={handleEmailSignIn}
+            disabled={createOrUpdateProfile.isPending || !selectedUserType || !email}
+            data-testid="button-email-signin"
+          >
+            <Mail className="h-5 w-5" />
+            {createOrUpdateProfile.isPending ? "جاري تسجيل الدخول..." : "الدخول بالبريد الإلكتروني"}
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card px-2 text-muted-foreground">أو</span>
             </div>
           </div>
 
