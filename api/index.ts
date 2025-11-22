@@ -11,25 +11,23 @@ if (getApps().length === 0) {
       throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is missing');
     }
     const serviceAccount = JSON.parse(serviceAccountKey);
-    
-    // Fix private key formatting for Vercel
+
     if (serviceAccount.private_key) {
       serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
     }
-    
+
     initializeApp({
       credential: cert(serviceAccount),
     });
   } catch (error) {
     console.error('Firebase init error:', error);
-    throw error; // Re-throw to see the error in Vercel logs
+    throw error;
   }
 }
 
 const db = getFirestore();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
@@ -61,390 +59,216 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-      const apiKey = process.env.IMGBB_API_KEY;
-      
-      if (!apiKey) {
-        return res.status(500).json({ message: 'مفتاح IMGBB_API_KEY غير موجود في متغيرات البيئة' });
-      }
+      const buffer = Buffer.from(base64Data, 'base64');
 
-      const formData = new URLSearchParams();
-      formData.append('key', apiKey);
-      formData.append('image', base64Data);
-      if (originalFileName) {
-        formData.append('name', originalFileName);
-      }
-
-      const imgbbResponse = await fetch('https://api.imgbb.com/1/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!imgbbResponse.ok) {
-        const errorData = await imgbbResponse.json();
-        throw new Error(errorData.error?.message || 'فشل في رفع الصورة إلى ImgBB');
-      }
-
-      const imgbbData = await imgbbResponse.json();
-
-      if (!imgbbData.success || !imgbbData.data) {
-        throw new Error('فشل في رفع الصورة إلى ImgBB');
+      if (buffer.length > 10 * 1024 * 1024) {
+        return res.status(400).json({ message: "حجم الصورة كبير جداً (الحد الأقصى 10MB)" });
       }
 
       const imageDoc = await db.collection('images').add({
-        imageUrl: imgbbData.data.url,
-        thumbnailUrl: imgbbData.data.thumb?.url || imgbbData.data.url,
-        deleteUrl: imgbbData.data.delete_url,
-        originalFileName: originalFileName || imgbbData.data.title || null,
+        data: base64Data,
         mimeType,
-        fileSize: imgbbData.data.size || null,
-        createdAt: new Date(),
+        originalFileName,
+        createdAt: new Date().toISOString(),
       });
 
-      return res.json({ 
+      return res.status(201).json({ 
         id: imageDoc.id,
-        imageUrl: imgbbData.data.url,
-        thumbnailUrl: imgbbData.data.thumb?.url || imgbbData.data.url,
+        url: `/api/images/${imageDoc.id}`
       });
     }
 
     if (path.startsWith('/images/') && method === 'GET') {
-      const id = path.split('/')[2];
-      const imageDoc = await db.collection('images').doc(id).get();
+      const imageId = path.split('/')[2];
+      const imageDoc = await db.collection('images').doc(imageId).get();
 
       if (!imageDoc.exists) {
         return res.status(404).json({ message: "الصورة غير موجودة" });
       }
 
-      const image = { id: imageDoc.id, ...imageDoc.data() } as Image;
-      return res.json({
-        id: image.id,
-        imageUrl: image.imageUrl,
-        thumbnailUrl: image.thumbnailUrl || image.imageUrl,
-        mimeType: image.mimeType,
-        originalFileName: image.originalFileName,
-        fileSize: image.fileSize,
-        createdAt: image.createdAt,
-      });
-    }
-
-    // ==================== Admins Routes ====================
-    if (path === '/admins/check' && method === 'GET') {
-      const email = req.query.email as string;
-      if (!email) {
-        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
+      const imageData = imageDoc.data();
+      if (!imageData) {
+        return res.status(404).json({ message: "بيانات الصورة غير موجودة" });
       }
 
-      const adminsSnapshot = await db.collection('admins')
-        .where('email', '==', email)
-        .limit(1)
-        .get();
-
-      if (adminsSnapshot.empty) {
-        return res.status(404).json({ message: "المستخدم ليس مشرفاً" });
-      }
-
-      const adminData = adminsSnapshot.docs[0].data();
-      return res.json({
-        email: email,
-        role: adminData.role || 'secondary',
-      });
-    }
-
-    if (path === '/admins' && method === 'GET') {
-      const adminsSnapshot = await db.collection('admins').get();
-      const admins = adminsSnapshot.docs.map((doc: any) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      return res.json(admins);
-    }
-
-    if (path === '/admins' && method === 'POST') {
-      const { email, role } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
-      }
-
-      const existingSnapshot = await db.collection('admins')
-        .where('email', '==', email)
-        .limit(1)
-        .get();
-
-      if (!existingSnapshot.empty) {
-        return res.status(400).json({ message: "المشرف موجود مسبقاً" });
-      }
-
-      const adminDoc = await db.collection('admins').add({
-        email,
-        role: role || 'secondary',
-        addedAt: new Date(),
-      });
-
-      const newAdmin = await db.collection('admins').doc(adminDoc.id).get();
-      return res.json({ id: newAdmin.id, ...newAdmin.data() });
-    }
-
-    if (path.startsWith('/admins/') && method === 'DELETE') {
-      const id = path.split('/')[2];
-      await db.collection('admins').doc(id).delete();
-      return res.json({ message: "تم حذف المشرف بنجاح" });
-    }
-
-    // ==================== Users Routes ====================
-    if (path.startsWith('/users/') && method === 'GET') {
-      const uid = path.split('/')[2];
-      const userDoc = await db.collection('users').doc(uid).get();
-
-      if (!userDoc.exists) {
-        return res.status(404).json({ message: "المستخدم غير موجود" });
-      }
-
-      const userData = userDoc.data();
-      return res.json({ ...userData, uid: userDoc.id });
-    }
-
-    if (path === '/users' && method === 'POST') {
-      const validatedData = insertUserProfileSchema.parse(req.body);
-      const existingUser = await db.collection('users').doc(validatedData.uid).get();
-      
-      if (existingUser.exists) {
-        return res.status(400).json({ message: "المستخدم موجود مسبقاً" });
-      }
-
-      let finalUserType = validatedData.userType;
-      if (validatedData.email) {
-        const adminsSnapshot = await db.collection('admins')
-          .where('email', '==', validatedData.email)
-          .get();
-        
-        if (!adminsSnapshot.empty) {
-          finalUserType = 'admin';
-        }
-      }
-
-      const userData = {
-        ...validatedData,
-        userType: finalUserType,
-        createdAt: new Date(),
-      };
-
-      await db.collection('users').doc(validatedData.uid).set(userData);
-      return res.json(userData);
-    }
-
-    if (path.startsWith('/users/') && method === 'PATCH') {
-      const uid = path.split('/')[2];
-      const { userType } = req.body;
-
-      if (!userType || !["buyer", "seller", "admin"].includes(userType)) {
-        return res.status(400).json({ message: "نوع المستخدم غير صالح" });
-      }
-
-      const userDoc = await db.collection('users').doc(uid).get();
-      if (!userDoc.exists) {
-        return res.status(404).json({ message: "المستخدم غير موجود" });
-      }
-
-      await db.collection('users').doc(uid).update({ userType });
-      const updatedUser = await db.collection('users').doc(uid).get();
-      return res.json({ ...updatedUser.data(), uid: updatedUser.id });
+      const buffer = Buffer.from(imageData.data, 'base64');
+      res.setHeader('Content-Type', imageData.mimeType);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.send(buffer);
     }
 
     // ==================== Sheep Routes ====================
     if (path === '/sheep' && method === 'GET') {
-      const sheepSnapshot = await db.collection('sheep').get();
-      const allSheep = await Promise.all(sheepSnapshot.docs.map(async (doc: any) => {
-        const sheepData = doc.data() as Sheep;
-        const imageUrls: string[] = [];
-        
-        if (sheepData.imageIds && sheepData.imageIds.length > 0) {
-          for (const imageId of sheepData.imageIds) {
-            try {
-              const imageDoc = await db.collection('images').doc(imageId).get();
-              if (imageDoc.exists) {
-                const imageData = imageDoc.data() as Image;
-                imageUrls.push(imageData.imageUrl);
-              }
-            } catch (err) {
-              console.error(`Error fetching image ${imageId}:`, err);
-            }
-          }
-        }
-        
-        return {
-          ...sheepData,
-          id: doc.id,
-          images: imageUrls,
-        };
-      }));
-
-      return res.json(allSheep);
+      const snapshot = await db.collection('sheep').get();
+      const sheep: Sheep[] = [];
+      snapshot.forEach(doc => {
+        sheep.push({ id: doc.id, ...doc.data() } as Sheep);
+      });
+      return res.status(200).json(sheep);
     }
 
     if (path.startsWith('/sheep/') && method === 'GET') {
-      const id = path.split('/')[2];
-      const sheepDoc = await db.collection('sheep').doc(id).get();
+      const sheepId = path.split('/')[2];
+      const sheepDoc = await db.collection('sheep').doc(sheepId).get();
 
       if (!sheepDoc.exists) {
         return res.status(404).json({ message: "الخروف غير موجود" });
       }
 
-      const sheepData = sheepDoc.data() as Sheep;
-      const imageUrls: string[] = [];
-      
-      if (sheepData.imageIds && sheepData.imageIds.length > 0) {
-        for (const imageId of sheepData.imageIds) {
-          try {
-            const imageDoc = await db.collection('images').doc(imageId).get();
-            if (imageDoc.exists) {
-              const imageData = imageDoc.data() as Image;
-              imageUrls.push(imageData.imageUrl);
-            }
-          } catch (err) {
-            console.error(`Error fetching image ${imageId}:`, err);
-          }
-        }
-      }
-      
-      return res.json({
-        ...sheepData,
-        id: sheepDoc.id,
-        images: imageUrls,
-      });
+      return res.status(200).json({ id: sheepDoc.id, ...sheepDoc.data() });
     }
 
     if (path === '/sheep' && method === 'POST') {
       const validation = insertSheepSchema.safeParse(req.body);
       if (!validation.success) {
-        return res.status(400).json({ 
-          message: validation.error.errors[0].message 
-        });
+        return res.status(400).json({ message: "بيانات غير صالحة", errors: validation.error.errors });
       }
 
-      const data = validation.data;
       const sheepDoc = await db.collection('sheep').add({
-        ...data,
-        isFeatured: data.isFeatured || false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        ...validation.data,
+        createdAt: new Date().toISOString(),
       });
 
-      const newSheep = await db.collection('sheep').doc(sheepDoc.id).get();
-      return res.json({ id: newSheep.id, ...newSheep.data() });
+      return res.status(201).json({ id: sheepDoc.id, ...validation.data });
     }
 
     if (path.startsWith('/sheep/') && method === 'PATCH') {
-      const id = path.split('/')[2];
-      const sheepDoc = await db.collection('sheep').doc(id).get();
+      const sheepId = path.split('/')[2];
+      const validation = insertSheepSchema.partial().safeParse(req.body);
 
-      if (!sheepDoc.exists) {
-        return res.status(404).json({ message: "الخروف غير موجود" });
-      }
-
-      const validation = insertSheepSchema.safeParse(req.body);
       if (!validation.success) {
-        return res.status(400).json({ 
-          message: validation.error.errors[0].message 
-        });
+        return res.status(400).json({ message: "بيانات غير صالحة", errors: validation.error.errors });
       }
 
-      const data = validation.data;
-      await db.collection('sheep').doc(id).update({
-        ...data,
-        updatedAt: new Date(),
+      await db.collection('sheep').doc(sheepId).update({
+        ...validation.data,
+        updatedAt: new Date().toISOString(),
       });
 
-      const updatedSheep = await db.collection('sheep').doc(id).get();
-      return res.json({ id: updatedSheep.id, ...updatedSheep.data() });
+      const updatedDoc = await db.collection('sheep').doc(sheepId).get();
+      return res.status(200).json({ id: updatedDoc.id, ...updatedDoc.data() });
     }
 
     if (path.startsWith('/sheep/') && method === 'DELETE') {
-      const id = path.split('/')[2];
-      await db.collection('sheep').doc(id).delete();
-      return res.json({ message: "تم حذف الخروف بنجاح" });
+      const sheepId = path.split('/')[2];
+      await db.collection('sheep').doc(sheepId).delete();
+      return res.status(204).end();
     }
 
     // ==================== Orders Routes ====================
     if (path === '/orders' && method === 'GET') {
-      const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
-      const orders = ordersSnapshot.docs.map((doc: any) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || data.createdAt,
-          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-        };
+      const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+      const orders: Order[] = [];
+      snapshot.forEach(doc => {
+        orders.push({ id: doc.id, ...doc.data() } as Order);
       });
-      return res.json(orders);
-    }
-
-    if (path.startsWith('/orders/') && method === 'GET') {
-      const id = path.split('/')[2];
-      const orderDoc = await db.collection('orders').doc(id).get();
-
-      if (!orderDoc.exists) {
-        return res.status(404).json({ message: "الطلب غير موجود" });
-      }
-
-      const order = { id: orderDoc.id, ...orderDoc.data() };
-      return res.json(order);
+      return res.status(200).json(orders);
     }
 
     if (path === '/orders' && method === 'POST') {
       const validation = insertOrderSchema.safeParse(req.body);
       if (!validation.success) {
-        return res.status(400).json({ 
-          message: validation.error.errors[0].message 
-        });
+        return res.status(400).json({ message: "بيانات غير صالحة", errors: validation.error.errors });
       }
 
-      const data = validation.data;
       const orderDoc = await db.collection('orders').add({
-        ...data,
-        status: data.status || 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        ...validation.data,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
       });
 
-      const newOrder = await db.collection('orders').doc(orderDoc.id).get();
-      return res.json({ id: newOrder.id, ...newOrder.data() });
+      return res.status(201).json({ id: orderDoc.id, ...validation.data, status: 'pending' });
     }
 
     if (path.startsWith('/orders/') && method === 'PATCH') {
-      const id = path.split('/')[2];
-      const { status } = req.body;
+      const orderId = path.split('/')[2];
 
-      if (!status) {
-        return res.status(400).json({ message: "الحالة مطلوبة" });
-      }
-
-      const orderDoc = await db.collection('orders').doc(id).get();
-      if (!orderDoc.exists) {
-        return res.status(404).json({ message: "الطلب غير موجود" });
-      }
-
-      await db.collection('orders').doc(id).update({
-        status,
-        updatedAt: new Date(),
+      await db.collection('orders').doc(orderId).update({
+        ...req.body,
+        updatedAt: new Date().toISOString(),
       });
 
-      const updatedOrder = await db.collection('orders').doc(id).get();
-      return res.json({ id: updatedOrder.id, ...updatedOrder.data() });
+      const updatedDoc = await db.collection('orders').doc(orderId).get();
+      return res.status(200).json({ id: updatedDoc.id, ...updatedDoc.data() });
     }
 
-    if (path.startsWith('/orders/') && method === 'DELETE') {
-      const id = path.split('/')[2];
-      await db.collection('orders').doc(id).delete();
-      return res.json({ message: "تم حذف الطلب بنجاح" });
+    // ==================== Users Routes ====================
+    if (path.startsWith('/users/') && method === 'GET') {
+      const userId = path.split('/')[2];
+      const userDoc = await db.collection('users').doc(userId).get();
+
+      if (!userDoc.exists) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+
+      return res.status(200).json({ uid: userDoc.id, ...userDoc.data() });
     }
 
-    return res.status(404).json({ message: 'Not found' });
+    if (path === '/users' && method === 'POST') {
+      const validation = insertUserProfileSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "بيانات غير صالحة", errors: validation.error.errors });
+      }
+
+      const { uid, ...userData } = validation.data;
+      await db.collection('users').doc(uid).set({
+        ...userData,
+        createdAt: new Date().toISOString(),
+      });
+
+      return res.status(200).json({ uid, ...userData });
+    }
+
+    if (path.startsWith('/users/') && method === 'PATCH') {
+      const userId = path.split('/')[2];
+
+      await db.collection('users').doc(userId).update({
+        ...req.body,
+        updatedAt: new Date().toISOString(),
+      });
+
+      const updatedDoc = await db.collection('users').doc(userId).get();
+      return res.status(200).json({ uid: updatedDoc.id, ...updatedDoc.data() });
+    }
+
+    // ==================== Admins Routes ====================
+    if (path === '/admins' && method === 'GET') {
+      const snapshot = await db.collection('admins').get();
+      const admins: any[] = [];
+      snapshot.forEach(doc => {
+        admins.push({ uid: doc.id, ...doc.data() });
+      });
+      return res.status(200).json(admins);
+    }
+
+    if (path === '/admins' && method === 'POST') {
+      const { uid, email } = req.body;
+
+      if (!uid || !email) {
+        return res.status(400).json({ message: "معرف المستخدم والبريد الإلكتروني مطلوبان" });
+      }
+
+      await db.collection('admins').doc(uid).set({
+        email,
+        createdAt: new Date().toISOString(),
+      });
+
+      return res.status(201).json({ uid, email });
+    }
+
+    if (path.startsWith('/admins/') && method === 'DELETE') {
+      const adminId = path.split('/')[2];
+      await db.collection('admins').doc(adminId).delete();
+      return res.status(204).end();
+    }
+
+    return res.status(404).json({ message: "المسار غير موجود" });
+
   } catch (error: any) {
     console.error('API Error:', error);
-    const status = error.status || error.statusCode || 500;
-    const message = error.message || "Internal Server Error";
-    return res.status(status).json({ message });
+    return res.status(500).json({ 
+      message: "حدث خطأ في الخادم",
+      error: error.message 
+    });
   }
 }
