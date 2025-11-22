@@ -28,33 +28,27 @@ export default function Login() {
       photoURL: string | null;
       userType: UserType;
     }): Promise<User> => {
-      // محاولة جلب المستخدم أولاً
-      const getUserRes = await apiRequest(`/api/users/${uid}`, "GET");
-      
-      if (getUserRes.ok) {
+      try {
+        // محاولة جلب المستخدم أولاً
+        const getUserRes = await apiRequest(`/api/users/${uid}`, "GET");
         // المستخدم موجود، نرجع بياناته
         return await getUserRes.json();
-      }
-      
-      // المستخدم غير موجود (404 أو أي خطأ آخر)، ننشئ حساب جديد
-      try {
-        const createRes = await apiRequest("/api/users", "POST", {
-          uid,
-          email,
-          displayName,
-          photoURL,
-          userType,
-        });
-
-        if (!createRes.ok) {
-          const errorData = await createRes.json().catch(() => ({ message: "خطأ غير معروف" }));
-          throw new Error(errorData.message || "فشل في إنشاء الحساب");
-        }
-        
-        return await createRes.json();
       } catch (error: any) {
-        console.error("Error in createOrUpdateProfile:", error);
-        throw error;
+        // المستخدم غير موجود، ننشئ حساب جديد
+        try {
+          const createRes = await apiRequest("/api/users", "POST", {
+            uid,
+            email,
+            displayName,
+            photoURL,
+            userType,
+          });
+          
+          return await createRes.json();
+        } catch (createError: any) {
+          console.error("Error creating user profile:", createError);
+          throw new Error(createError.message || "فشل في إنشاء الحساب");
+        }
       }
     },
     onSuccess: async (data) => {
