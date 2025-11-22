@@ -11,11 +11,18 @@ if (getApps().length === 0) {
       throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is missing');
     }
     const serviceAccount = JSON.parse(serviceAccountKey);
+    
+    // Fix private key formatting for Vercel
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
+    
     initializeApp({
       credential: cert(serviceAccount),
     });
   } catch (error) {
     console.error('Firebase init error:', error);
+    throw error; // Re-throw to see the error in Vercel logs
   }
 }
 
