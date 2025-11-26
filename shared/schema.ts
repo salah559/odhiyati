@@ -1,152 +1,176 @@
 import { z } from "zod";
 
-// Sheep Categories
-export const sheepCategories = ["محلي", "روماني", "إسباني"] as const;
-export type SheepCategory = typeof sheepCategories[number];
+// User roles
+export const userRoles = ["buyer", "seller", "admin"] as const;
+export type UserRole = typeof userRoles[number];
 
-// Image Types
-export interface Image {
-  id: string;
-  imageUrl: string;
-  thumbnailUrl?: string;
-  deleteUrl?: string;
-  originalFileName?: string;
-  mimeType: string;
-  fileSize?: number;
-  createdAt: Date;
+// Sheep status
+export const sheepStatuses = ["pending", "approved", "rejected"] as const;
+export type SheepStatus = typeof sheepStatuses[number];
+
+// Order status  
+export const orderStatuses = ["pending", "confirmed", "rejected", "delivered"] as const;
+export type OrderStatus = typeof orderStatuses[number];
+
+// User schema (Firestore)
+export interface User {
+  uid: string;
+  email: string;
+  role: UserRole;
+  phone?: string;
+  // Seller-specific fields
+  fullName?: string;
+  address?: string;
+  city?: string;
+  municipality?: string; // البلدية/الحي
+  profileComplete?: boolean; // هل ملأ البائع بيانات كاملة
+  createdAt: number;
+  updatedAt?: number;
 }
 
-export const insertImageSchema = z.object({
-  imageUrl: z.string().url("رابط الصورة يجب أن يكون صالحاً"),
-  thumbnailUrl: z.string().url().optional(),
-  deleteUrl: z.string().url().optional(),
-  originalFileName: z.string().optional(),
-  mimeType: z.string(),
-  fileSize: z.number().optional(),
+export const insertUserSchema = z.object({
+  email: z.string().email("البريد الإلكتروني غير صالح"),
+  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+  role: z.enum(userRoles, { required_error: "يجب اختيار نوع الحساب" }),
+  phone: z.string().optional(),
 });
 
-export type InsertImage = z.infer<typeof insertImageSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 
-// Sheep Types
+// Seller profile update schema
+export const updateSellerProfileSchema = z.object({
+  fullName: z.string().min(3, "الاسم الكامل يجب أن يكون 3 أحرف على الأقل"),
+  phone: z.string().min(7, "رقم الهاتف يجب أن يكون صحيح"),
+  address: z.string().min(5, "العنوان يجب أن يكون 5 أحرف على الأقل"),
+  city: z.string().min(2, "يجب اختيار المدينة"),
+  municipality: z.string().min(2, "يجب إدخال البلدية"),
+});
+
+export type UpdateSellerProfile = z.infer<typeof updateSellerProfileSchema>;
+
+// Sheep schema (Firestore)
 export interface Sheep {
   id: string;
-  name: string;
-  category: SheepCategory;
+  sellerId: string;
+  sellerEmail?: string;
+  images: string[]; // URLs from ImgBB
   price: number;
-  discountPercentage?: number;
-  imageIds: string[];
-  images?: string[];
-  age: string;
-  weight: string;
-  breed: string;
-  healthStatus: string;
+  age: number; // in months
+  weight: number; // in kg
+  city: string;
+  municipality?: string; // البلدية/الحي
   description: string;
-  isFeatured: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  status: SheepStatus;
+  rejectionReason?: string; // سبب الرفض (إن وجد)
+  createdAt: number;
+  updatedAt?: number;
 }
 
 export const insertSheepSchema = z.object({
-  name: z.string().min(1, "اسم الخروف مطلوب"),
-  category: z.enum(sheepCategories),
-  price: z.number().min(0, "السعر يجب أن يكون موجباً"),
-  discountPercentage: z.number().min(0).max(100, "النسبة يجب أن تكون بين 0 و 100").optional(),
-  imageIds: z.array(z.string()).min(1, "يجب إضافة صورة واحدة على الأقل"),
-  age: z.string().min(1, "العمر مطلوب"),
-  weight: z.string().min(1, "الوزن مطلوب"),
-  breed: z.string().min(1, "السلالة مطلوبة"),
-  healthStatus: z.string().min(1, "الحالة الصحية مطلوبة"),
+  price: z.number().min(1, "السعر يجب أن يكون أكبر من صفر"),
+  age: z.number().min(1, "العمر يجب أن يكون أكبر من صفر"),
+  weight: z.number().min(1, "الوزن يجب أن يكون أكبر من صفر"),
+  city: z.string().min(2, "يجب اختيار الولاية"),
+  municipality: z.string().min(2, "يجب اختيار البلدية"),
   description: z.string().min(10, "الوصف يجب أن يكون 10 أحرف على الأقل"),
-  isFeatured: z.boolean().default(false),
 });
 
 export type InsertSheep = z.infer<typeof insertSheepSchema>;
 
-// Order Types
-export const orderStatuses = ["pending", "processing", "completed", "cancelled"] as const;
-export type OrderStatus = typeof orderStatuses[number];
-
+// Order schema (Firestore)
 export interface Order {
   id: string;
-  userId?: string;
-  userName: string;
-  userPhone: string;
-  wilayaCode: string;
-  wilayaName: string;
-  communeId: number;
-  communeName: string;
-  items: {
-    sheepId: string;
-    sheepName: string;
-    sheepImageId: string;
-    price: number;
-    quantity: number;
-  }[];
-  totalAmount: string;
+  buyerId: string;
+  buyerEmail?: string;
+  sellerId: string;
+  sellerEmail?: string;
+  sheepId: string;
+  sheepData?: Partial<Sheep>; // Snapshot of sheep data at order time
+  totalPrice: number;
   status: OrderStatus;
-  notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: number;
+  updatedAt?: number;
 }
 
 export const insertOrderSchema = z.object({
-  userId: z.string().optional(),
-  userName: z.string().min(1, "الاسم مطلوب"),
-  userPhone: z.string().min(10, "رقم الهاتف غير صالح"),
-  wilayaCode: z.string().min(1, "الولاية مطلوبة"),
-  wilayaName: z.string().min(1, "الولاية مطلوبة"),
-  communeId: z.number().min(1, "البلدية مطلوبة"),
-  communeName: z.string().min(1, "البلدية مطلوبة"),
-  items: z.array(z.object({
-    sheepId: z.string(),
-    sheepName: z.string(),
-    sheepImageId: z.string(),
-    price: z.number(),
-    quantity: z.number().min(1),
-  })).min(1, "يجب إضافة منتج واحد على الأقل"),
-  totalAmount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "المبلغ غير صالح"),
-  notes: z.string().optional(),
-  status: z.enum(orderStatuses).default("pending"),
+  sheepId: z.string().min(1, "يجب اختيار الخروف"),
+  totalPrice: z.number().min(1, "السعر غير صالح"),
 });
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
-// User Types
-export const userTypes = ["buyer", "seller", "admin", "guest"] as const;
-export type UserType = typeof userTypes[number];
-
-export interface User {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-  userType?: UserType;
-  isAdmin?: boolean;
-  adminRole?: "primary" | "secondary";
-  createdAt?: Date;
-}
-
-export const insertUserProfileSchema = z.object({
-  uid: z.string(),
-  email: z.string().email("البريد الإلكتروني غير صالح").nullable().or(z.null()),
-  displayName: z.string().nullable(),
-  photoURL: z.string().nullable().optional(),
-  userType: z.enum(userTypes),
+// Filter schema for sheep browsing
+export const sheepFilterSchema = z.object({
+  minPrice: z.number().optional(),
+  maxPrice: z.number().optional(),
+  minAge: z.number().optional(),
+  maxAge: z.number().optional(),
+  minWeight: z.number().optional(),
+  maxWeight: z.number().optional(),
+  cities: z.array(z.string()).optional(),
+  status: z.enum(sheepStatuses).optional(),
 });
 
-export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+export type SheepFilter = z.infer<typeof sheepFilterSchema>;
 
-// Admin Types
-export interface Admin {
-  id: string;
-  email: string;
-  role: "primary" | "secondary";
-  addedAt: Date;
-}
-
-export const insertAdminSchema = z.object({
-  email: z.string().email("البريد الإلكتروني غير صالح"),
-  role: z.enum(["primary", "secondary"]).default("secondary"),
-});
-
-export type InsertAdmin = z.infer<typeof insertAdminSchema>;
+// Algerian provinces (Wilayat) - 58 provinces from official data - sorted alphabetically
+export const algeriaCities = [
+  "أدرار",
+  "أم البواقي",
+  "أولاد جلال",
+  "إليزي",
+  "الأغواط",
+  "الجزائر",
+  "الجلفة",
+  "الشلف",
+  "الطارف",
+  "الوادي",
+  "النعامة",
+  "البليدة",
+  "البويرة",
+  "البيض",
+  "المدية",
+  "المسيلة",
+  "المغير",
+  "المنيعة",
+  "باتنة",
+  "بجاية",
+  "برج باجي مختار",
+  "برج بوعريريج",
+  "بسكرة",
+  "بشار",
+  "بني عباس",
+  "بومرداس",
+  "تبسة",
+  "تقرت",
+  "تلمسان",
+  "تمنراست",
+  "تندوف",
+  "تيارت",
+  "تيبازة",
+  "تيزي وزو",
+  "تيسمسيلت",
+  "تيميمون",
+  "جانت",
+  "جيجل",
+  "خنشلة",
+  "سطيف",
+  "سعيدة",
+  "سكيكدة",
+  "سوق أهراس",
+  "سيدي بلعباس",
+  "عنابة",
+  "عين الدفلة",
+  "عين تيموشنت",
+  "عين صالح",
+  "عين قزام",
+  "غرداية",
+  "غليزان",
+  "قالمة",
+  "قسنطينة",
+  "مستغانم",
+  "معسكر",
+  "ميلة",
+  "ورقلة",
+  "وهران",
+] as const;

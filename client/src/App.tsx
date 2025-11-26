@@ -1,144 +1,95 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import NotFound from "@/pages/not-found";
-import Home from "@/pages/Home";
-import Products from "@/pages/Products";
-import ProductDetail from "@/pages/ProductDetail";
-import Login from "@/pages/Login";
-import DownloadApp from "@/pages/DownloadApp";
-import AdminLayout from "@/pages/admin/AdminLayout";
+import Login from "@/pages/login";
+import Register from "@/pages/register";
+import LandingPage from "@/pages/landing";
+import BrowseSheep from "@/pages/browse";
+import SheepDetail from "@/pages/sheep-detail";
+import SellerDashboard from "@/pages/seller-dashboard";
+import SellerProfile from "@/pages/seller-profile";
+import AdminDashboard from "@/pages/admin-dashboard";
+import ContactPage from "@/pages/contact";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import PublicRoute from "@/components/PublicRoute";
 
 function Router() {
-  const { loading, user } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">جاري التحميل...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Switch>
-      <Route path="/login" component={Login} />
+      {/* Public routes */}
       <Route path="/">
-        {() => {
-          if (!user) {
-            return <Redirect to="/login" />;
-          }
-          return (
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <Home />
-              </main>
-              <Footer />
-            </div>
-          );
-        }}
+        <PublicRoute>
+          <Login />
+        </PublicRoute>
       </Route>
-      <Route path="/products">
-        {() => (
-          <ProtectedRoute>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <Products />
-              </main>
-              <Footer />
-            </div>
-          </ProtectedRoute>
-        )}
+      <Route path="/login">
+        <PublicRoute>
+          <Login />
+        </PublicRoute>
       </Route>
-      <Route path="/products/:id">
-        {() => (
-          <ProtectedRoute>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <ProductDetail />
-              </main>
-              <Footer />
-            </div>
-          </ProtectedRoute>
-        )}
+      <Route path="/landing" component={LandingPage} />
+      <Route path="/contact" component={ContactPage} />
+      <Route path="/register">
+        <PublicRoute>
+          <Register />
+        </PublicRoute>
       </Route>
-      <Route path="/download">
-        {() => (
-          <ProtectedRoute>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <DownloadApp />
-              </main>
-              <Footer />
-            </div>
-          </ProtectedRoute>
-        )}
+      
+      {/* Buyer routes */}
+      <Route path="/browse">
+        <ProtectedRoute allowedRoles={["buyer", "admin", "seller"]} allowGuest={true}>
+          <BrowseSheep />
+        </ProtectedRoute>
       </Route>
+      <Route path="/sheep/:id">
+        <ProtectedRoute allowedRoles={["buyer", "admin", "seller"]} allowGuest={true}>
+          <SheepDetail />
+        </ProtectedRoute>
+      </Route>
+      
+      {/* Seller routes */}
+      <Route path="/seller">
+        <ProtectedRoute allowedRoles={["seller"]}>
+          <SellerDashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/seller/profile">
+        <ProtectedRoute allowedRoles={["seller"]}>
+          <SellerProfile />
+        </ProtectedRoute>
+      </Route>
+      
+      {/* Admin routes */}
       <Route path="/admin">
-        {() => (
-          <ProtectedRoute>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <AdminLayout />
-              </main>
-              <Footer />
-            </div>
-          </ProtectedRoute>
-        )}
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <AdminDashboard />
+        </ProtectedRoute>
       </Route>
-      <Route path="/admin/:rest+">
-        {() => (
-          <ProtectedRoute>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <AdminLayout />
-              </main>
-              <Footer />
-            </div>
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route>
-        {() => (
-          <ProtectedRoute>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <NotFound />
-              </main>
-              <Footer />
-            </div>
-          </ProtectedRoute>
-        )}
-      </Route>
+      
+      {/* Fallback to 404 */}
+      <Route component={NotFound} />
     </Switch>
   );
 }
 
-export default function App() {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
+
+export default App;

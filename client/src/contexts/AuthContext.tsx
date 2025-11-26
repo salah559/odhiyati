@@ -1,94 +1,149 @@
-
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { app } from '@/config/firebase.config';
-import { useQuery } from '@tanstack/react-query';
-import type { User, UserType } from '@shared/schema';
+import { createContext, useContext, useEffect, useState } from "react";
+import { User as FirebaseUser, onAuthStateChanged, signOut as firebaseSignOut, signInWithPopup, setPersistence, browserLocalPersistence, signInAnonymously } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, db, googleProvider } from "@/lib/firebase";
+import { User, UserRole } from "@shared/schema";
 
 interface AuthContextType {
   user: User | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
-  isAdmin: boolean;
-  isGuest: boolean;
+  signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  signInWithGoogle: (role?: UserRole) => Promise<{ success: boolean; error?: string; userExists?: boolean }>;
+  signInAsGuest: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [guestUser, setGuestUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // Check for guest user in localStorage
+  const fetchUserData = async (firebaseUser: FirebaseUser) => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+      if (userDoc.exists()) {
+        setUser(userDoc.data() as User);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      setUser(null);
+    }
+  };
+
+  const refreshUser = async () => {
+    if (firebaseUser) {
+      await fetchUserData(firebaseUser);
+    }
+  };
+
   useEffect(() => {
-    const loadGuestUser = () => {
-      const storedGuest = localStorage.getItem('guestUser');
-      if (storedGuest) {
-        try {
-          setGuestUser(JSON.parse(storedGuest));
-        } catch (e) {
-          console.error('Error parsing guest user:', e);
-          localStorage.removeItem('guestUser');
+    // Set Firebase persistence to browser local storage
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        // Persistence set successfully
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          setFirebaseUser(firebaseUser);
+          
+          if (firebaseUser) {
+            await fetchUserData(firebaseUser);
+          } else {
+            setUser(null);
+          }
+          
+          setLoading(false);
+        });
+
+        return () => unsubscribe();
+      })
+      .catch((error) => {
+        console.error("Error setting persistence:", error);
+        setLoading(false);
+      });
+  }, []);
+
+  const signOut = async () => {
+    await firebaseSignOut(auth);
+    setUser(null);
+    setFirebaseUser(null);
+  };
+
+  const signInWithGoogle = async (role?: UserRole): Promise<{ success: boolean; error?: string; userExists?: boolean }> => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+      
+      const userDocRef = doc(db, "users", firebaseUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        // User already exists
+        const existingUser = userDoc.data() as User;
+        setUser(existingUser);
+        return { success: true, userExists: true };
+      } else {
+        // New user - role is required
+        if (!role) {
+          // Sign out and return error
+          await firebaseSignOut(auth);
+          return { 
+            success: false, 
+            error: "يجب اختيار نوع الحساب عند التسجيل لأول مرة",
+            userExists: false 
+          };
         }
+        
+        // Create new user document
+        const newUser: User = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || "",
+          role: role,
+          createdAt: Date.now(),
+        };
+        
+        // Only add phone if it exists
+        if (firebaseUser.phoneNumber) {
+          newUser.phone = firebaseUser.phoneNumber;
+        }
+        
+        await setDoc(userDocRef, newUser);
+        setUser(newUser);
+        return { success: true, userExists: false };
       }
-    };
-
-    loadGuestUser();
-
-    // Listen for storage events
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'guestUser') {
-        loadGuestUser();
+    } catch (error: any) {
+      console.error("Google sign-in error:", error);
+      
+      let errorMessage = "حدث خطأ أثناء تسجيل الدخول بحساب Google";
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "تم إغلاق نافذة تسجيل الدخول";
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = "تم حظر نافذة تسجيل الدخول من قبل المتصفح";
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorMessage = "تم إلغاء طلب تسجيل الدخول";
       }
-    };
+      
+      return { success: false, error: errorMessage };
+    }
+  };
 
-    // Listen for custom event for same-window updates
-    const handleGuestUpdate = () => {
-      loadGuestUser();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('guestUserUpdated', handleGuestUpdate);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('guestUserUpdated', handleGuestUpdate);
-    };
-  }, []);
-
-  // Listen to Firebase auth changes
-  useEffect(() => {
-    const auth = getAuth(app);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-      setAuthLoading(false);
-      if (!user) {
-        setGuestUser(null);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Fetch user profile from database if Firebase user exists
-  const { data: dbUser, isLoading: dbLoading } = useQuery<User>({
-    queryKey: ['/api/users', firebaseUser?.uid],
-    enabled: !!firebaseUser?.uid,
-    retry: false,
-    // Don't show error toast for 404s - user might not exist yet
-    meta: {
-      ignoreErrors: true,
-    },
-  });
-
-  const user = guestUser || dbUser || null;
-  const loading = authLoading || (!!firebaseUser && dbLoading);
-  const isAdmin = user?.userType === 'admin';
-  const isGuest = user?.userType === 'guest';
+  const signInAsGuest = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      localStorage.setItem("guestMode", "true");
+      console.log("✅ Guest mode enabled");
+      return { success: true };
+    } catch (error: any) {
+      console.error("Guest mode error:", error);
+      return { success: false, error: "فشل دخول الزائر" };
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading, isAdmin, isGuest }}>
+    <AuthContext.Provider value={{ user, firebaseUser, loading, signOut, refreshUser, signInWithGoogle, signInAsGuest }}>
       {children}
     </AuthContext.Provider>
   );
@@ -97,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

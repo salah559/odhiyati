@@ -1,158 +1,189 @@
-# Design Guidelines: أضحيتي (Sheep E-commerce Platform)
+# Odhiyati Design Guidelines
 
 ## Design Approach
-**Reference-Based E-commerce:** Inspired by Airbnb's product showcase and Etsy's warm, trustworthy aesthetic, adapted for Arabic-speaking Islamic market selling livestock for Eid al-Adha.
 
-## Cultural & Language Considerations
-- **RTL Layout:** All interfaces flow right-to-left
-- **Arabic Typography:** Primary language is Arabic with elegant, readable fonts
-- **Cultural Sensitivity:** Design reflects Islamic values and traditions around Eid al-Adha
-- **Trust Elements:** Halal certifications, quality assurances prominently displayed
+**Reference-Based Approach**: Drawing inspiration from established e-commerce marketplaces (Airbnb for trust/browsing patterns, Etsy for product showcases) adapted for livestock marketplace and Arabic RTL context.
+
+**Core Principle**: Build trust through clarity, professional presentation of livestock products, and seamless role-based experiences.
+
+---
 
 ## Typography
-**Arabic Fonts (Google Fonts):**
-- Primary: 'Noto Sans Arabic' or 'Cairo' - Clean, modern Arabic font
-- Headings: 600-700 weight, sizes from text-2xl to text-5xl
-- Body: 400-500 weight, text-base to text-lg
-- Maintain strong hierarchy with clear size differences
+
+**Arabic Font Stack**:
+- Primary: 'Cairo' or 'Tajawal' from Google Fonts (excellent Arabic readability)
+- Weights: Regular (400), Medium (500), SemiBold (600), Bold (700)
+
+**Hierarchy**:
+- Hero Headlines: text-5xl md:text-6xl font-bold
+- Section Titles: text-3xl md:text-4xl font-semibold
+- Card Titles: text-xl font-semibold
+- Body Text: text-base font-normal
+- Labels/Metadata: text-sm font-medium
+- Captions: text-xs
+
+---
 
 ## Layout System
-**Spacing Units:** Use Tailwind units of 2, 4, 6, 8, 12, and 16 for consistent rhythm
-- Small gaps/padding: p-2, p-4
-- Medium spacing: p-6, p-8
-- Large section spacing: py-12, py-16
-- Container max-width: max-w-7xl with px-4 padding
 
-## Core Pages & Components
+**RTL Configuration**: Apply `dir="rtl"` to html element, use logical properties (start/end instead of left/right)
 
-### Public-Facing Pages
+**Spacing Primitives**: Tailwind units of 2, 4, 6, and 8 (e.g., p-4, gap-6, mb-8, space-y-4)
 
-**Homepage (Landing):**
-- Hero: Full-width image of premium sheep with overlay text announcing "أضحيتي - اختر أضحيتك المثالية" with blurred background CTA button
-- Featured Categories: 3-column grid showing sheep types (نعجة، كبش، خروف)
-- Featured Products: 4-column grid (2 on tablet, 1 on mobile) with product cards
-- Trust Signals: Icons with text showing guarantees (جودة مضمونة، توصيل سريع، شهادة حلال)
-- Special Offers Section: Highlighted discounted sheep
-- Footer: Contact info, social media, quick links, newsletter signup
+**Container Strategy**:
+- Max-width: max-w-7xl mx-auto
+- Padding: px-4 md:px-6 lg:px-8
+- Section spacing: py-12 md:py-16 lg:py-20
 
-**Product Listing Page:**
-- Filter Sidebar (collapsible on mobile): Categories, price range, age, weight
-- Product Grid: 3-4 columns desktop, 2 tablet, 1 mobile
-- Product Cards: Primary image, sheep type badge, price (with discount badge if applicable), brief specs
-- Sorting Options: Price, newest, featured
+**Grid Patterns**:
+- Product cards: grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6
+- Dashboard stats: grid-cols-2 md:grid-cols-4 gap-4
+- Forms: Single column max-w-md for auth, two-column for detailed forms
 
-**Product Detail Page:**
-- Large Image Gallery: Main carousel with thumbnails below (5-8 images per sheep)
-- Product Info Panel: 
-  - Sheep name/ID, category badge
-  - Price (original + discounted if applicable)
-  - Key specifications: Age, weight, breed, health status
-  - Detailed description
-  - "اطلب الآن" (Order Now) primary CTA
-- Trust badges: Halal certified, health checked, quality guaranteed
-- Similar Products: 4-column grid below
-
-### Admin Dashboard
-
-**Admin Panel Layout:**
-- Top Navigation: Logo, admin name, logout
-- Sidebar: Dashboard, Products, Orders, Discounts, Admins, Settings
-- Main Content Area: Data tables, forms, statistics
-
-**Products Management:**
-- Table View: Image thumbnail, name, category, price, stock status, actions
-- Add/Edit Form: Multi-image upload, category select, specs inputs, description textarea
-- Bulk Actions: Delete, apply discount
-
-**Orders Management:**
-- Order Cards: Customer info, products ordered, total, status dropdown, timestamp
-- Filter by status: pending, processing, completed, cancelled
-
-**Discount Management:**
-- Create discount: Product selection, percentage/fixed amount, validity dates
-- Active Discounts List: Product, discount amount, expiry, toggle active/inactive
-
-**Admin Management:**
-- Admin list table: Email, role, date added, remove button
-- Add Admin Form: Email input, role selector, add button
-- Primary admin (bouazzasalah120120@gmail.com) cannot be removed
+---
 
 ## Component Library
 
-**Navigation:**
-- Top Bar: Logo (right), main menu (center), user account/cart (left)
-- Mobile: Hamburger menu (left for RTL), slide-in navigation
+### Navigation
+**Main Header**:
+- Fixed position with backdrop blur
+- Logo (right side in RTL), centered navigation links, auth/profile (left side)
+- Mobile: Hamburger menu transitioning from left
+- Height: h-16 md:h-20
 
-**Product Card:**
-- Image container with aspect-ratio-square
-- Discount badge (top-left corner): "-20%" in contrasting treatment
-- Category badge: Small pill at bottom of image
-- Text section: Title, price (strikethrough if discounted), new price
+**Dashboard Sidebar**:
+- Fixed right sidebar (RTL) with navigation items
+- Width: w-64 on desktop, collapsible drawer on mobile
+- Active state with border-r-4 accent indicator
 
-**Buttons:**
-- Primary CTA: Rounded corners (rounded-lg), medium padding (px-6 py-3)
-- Secondary: Outlined version of primary
-- Text buttons: No background, underline on hover
+### Product Cards (Sheep Listings)
+**Structure**:
+- Aspect ratio 4:3 image container with rounded-lg overflow-hidden
+- Image with hover zoom effect (scale-105 transition)
+- Card padding: p-4
+- Price badge: Positioned top-left (RTL) with backdrop blur
+- Status badge: Top-right for seller/admin views
+- Grid of metadata icons (age, weight, location) with text-sm
+- Primary CTA button at bottom
 
-**Forms:**
-- Input fields: Rounded borders (rounded-md), consistent height (h-12)
-- Labels: Above inputs, text-sm, medium weight
-- Required field indicator: Red asterisk
-- Error states: Red border, error message below
+### Authentication Forms
+**Layout**:
+- Centered card: max-w-md with p-8
+- Logo/brand at top
+- Input fields with mb-4 spacing
+- Role selection: Radio button group with custom card-style selectors
+- Submit button: w-full with py-3
 
-**Image Gallery:**
-- Main viewer: Large display area
-- Thumbnail strip: Horizontal scroll with 4-5 visible thumbnails
-- Zoom on click/hover
+### Filters Panel
+**Buyer Interface**:
+- Sticky sidebar (desktop) or expandable drawer (mobile)
+- Vertical stack of filter groups with space-y-6
+- Range sliders for price, age, weight
+- Checkbox list for cities
+- "Apply Filters" button at bottom
 
-**Trust Badges:**
-- Icon + text horizontal layout
-- Icons from Heroicons library
-- Subtle background (bg-gray-50 equivalent without color reference)
+### Admin Review Interface
+**Pending Products View**:
+- Two-column layout: Image gallery (left/right in RTL) + details panel
+- Approve/Reject action buttons prominently placed
+- Metadata table with clear labels
+- Seller information card
 
-**Data Tables (Admin):**
-- Alternating row styling
-- Action buttons column (right for RTL)
-- Responsive: Stack rows on mobile
+### Dashboard Stats Cards
+**Metrics Display**:
+- Four-column grid on desktop (grid-cols-4)
+- Icon + number + label pattern
+- Padding: p-6
+- Subtle border with rounded-lg
 
-## Distinctive Design Element
-**Islamic Geometric Pattern Accent:** Subtle geometric pattern overlay (inspired by Islamic architecture) used sparingly:
-- Background watermark on hero section
-- Section dividers
-- Footer background
-- Never overwhelming, always subtle and tasteful
+### Order Management
+**Order Cards**:
+- Timeline-style layout showing order progression
+- Sheep thumbnail + buyer/seller info + status badge
+- Action buttons contextual to role
+- Expandable details section
 
-## Images Strategy
+---
 
-**Homepage Hero:**
-- High-quality image of premium sheep in natural setting
-- Image description: "Healthy, well-groomed sheep in pastoral environment, professional photography, warm natural lighting"
-- Overlay with semi-transparent dark layer for text readability
+## Images
 
-**Product Images:**
-- Multiple angles per sheep: front, side, close-up of wool quality, full body
-- Consistent background: Clean, neutral outdoor or studio setting
-- Professional, well-lit photography
+**Hero Section**: 
+- Full-width hero image showing pastoral sheep farming scene (authentic Middle Eastern/Arab context)
+- Height: h-[500px] md:h-[600px]
+- Overlay gradient for text readability
+- CTAs with backdrop-blur-sm bg-white/10 treatment
 
-**Category Images:**
-- Representative sheep for each category
-- Badge overlay with category name in Arabic
+**Product Images**:
+- Square format prioritized for consistency
+- Multiple images per listing (gallery with thumbnails)
+- Placeholder: Sheep silhouette icon for missing images
 
-**Trust Section:**
-- Icons only, no photography needed
+**Trust Elements**:
+- Seller profile avatars (circular, border-2)
+- Admin verification badges
+- Location/certification icons
 
-## Accessibility
-- High contrast text-to-background ratios
-- Focus indicators on all interactive elements
-- Screen reader-friendly Arabic labels
-- Keyboard navigation support
-- RTL-aware focus order
+**Image Locations**:
+- Homepage hero: Welcoming farm/pastoral scene
+- About section: Traditional sheep market imagery
+- How it works: Illustrated steps or authentic photos of process
+- Testimonials: User/seller photos if available
+- Footer: Subtle pattern or minimal imagery
 
-## Animations
-Minimal and purposeful:
-- Smooth image carousel transitions
-- Gentle hover lift on product cards (transform: translateY(-4px))
-- Fade-in for modals/dropdowns
-- No distracting scroll animations
+---
 
-This design creates a trustworthy, professional platform specifically tailored for Arabic-speaking customers shopping for Eid al-Adha sacrificial animals, while providing administrators with powerful management tools.
+## Key Interactions
+
+**No Complex Animations**: Minimal, purposeful motion only
+- Card hover: subtle shadow elevation (shadow-md to shadow-xl)
+- Button hover: slight opacity change
+- Image hover: scale-105 zoom
+- Page transitions: Simple fade
+
+**Loading States**: Skeleton screens for product grids, spinner for actions
+
+**Toast Notifications**: Fixed bottom-left (RTL), slide-in animation for order confirmations, approvals
+
+---
+
+## Arabic-Specific Considerations
+
+- All text right-aligned by default
+- Navigation flows right-to-left
+- Form labels positioned right of inputs
+- Icons mirror horizontally where directional (arrows, etc.)
+- Number formatting uses Arabic-Indic numerals or Western Arabic based on preference (clarify with user)
+
+---
+
+## Page-Specific Layouts
+
+**Landing Page**:
+1. Hero with CTA (Register as Buyer/Seller)
+2. How it works (3-column process)
+3. Featured sheep (carousel or grid)
+4. Trust indicators (admin oversight, verified sellers)
+5. Testimonials (2-column)
+6. Final CTA section
+
+**Buyer Browse**:
+- Left sidebar filters (desktop) / Top drawer (mobile)
+- Main grid of sheep cards
+- Pagination or infinite scroll
+
+**Seller Dashboard**:
+- Top stats row (total listings, pending, approved, sold)
+- Action bar (Add New Sheep button)
+- Table/grid of sheep listings with status badges
+
+**Admin Panel**:
+- Tabs: Pending Reviews, All Products, Users, Orders
+- Review queue with approve/reject workflow
+- User management table
+- Order overview with filtering
+
+---
+
+**Accessibility**: High contrast for buttons and CTAs, clear focus states, semantic HTML structure, ARIA labels for Arabic screen readers
+
+This design creates a trustworthy, professional marketplace experience optimized for Arabic users across all three roles.
